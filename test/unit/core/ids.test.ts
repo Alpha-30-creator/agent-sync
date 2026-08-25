@@ -9,9 +9,13 @@ import {
 import { ARTIFACT_TYPES } from '../../../src/core/model/types.js';
 
 describe('parseArtifactId', () => {
-  it.each(['db-migrate', 'github', 'a', 'agent-sync-create-skill', 'x1-y2'])('accepts %s', (id) => {
-    expect(parseArtifactId(id)).toEqual({ ok: true, value: id });
-  });
+  // Underscores are allowed: MCP server names such as `node_repl` must be expressible.
+  it.each(['db-migrate', 'github', 'a', 'agent-sync-create-skill', 'x1-y2', 'node_repl'])(
+    'accepts %s',
+    (id) => {
+      expect(parseArtifactId(id)).toEqual({ ok: true, value: id });
+    },
+  );
 
   it.each([
     'MySkill',
@@ -19,7 +23,8 @@ describe('parseArtifactId', () => {
     'trailing-',
     '-leading',
     'double--dash',
-    'under_score',
+    'trailing_',
+    'double__underscore',
     'dot.dot',
   ])('rejects %s', (id) => {
     expect(parseArtifactId(id)).toEqual({

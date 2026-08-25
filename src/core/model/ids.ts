@@ -9,11 +9,15 @@ import {
 } from './types.js';
 
 /**
- * Ids are lowercase kebab-case. Enforced rather than normalized: macOS and Windows
- * filesystems are case-insensitive by default, so `MySkill` and `myskill` would collide
- * on one machine and not another (docs/05-tech-stack.md §4).
+ * Ids are lowercase, separated by hyphens or underscores.
+ *
+ * The rule that matters is *lowercase*: macOS and Windows filesystems are
+ * case-insensitive by default, so `MySkill` and `myskill` would collide on one machine
+ * and not another (docs/05-tech-stack.md §4). Separators are not a collision risk, and
+ * underscores are common in MCP server names an agent already uses — an id has to be
+ * able to mirror those, since it is the key inside the agent's own config.
  */
-export const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const ID_PATTERN = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/;
 
 export type IdError =
   | { readonly kind: 'empty' }

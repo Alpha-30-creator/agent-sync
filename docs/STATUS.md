@@ -18,6 +18,10 @@
   pure TOML text-span splicer + jsonc-parser, verified against the owner's real configs.
 - ✅ M0 — first `capability-table.ts` with verified paths and `verifiedAgainst` versions.
 - ✅ **M0 complete.**
+- ✅ **M3 complete** — MCP servers end to end: canonical schema with `${secret:}` / `${env:}`
+  indirection, three dialect translators with capability warnings, surgical writers for all four
+  config shapes, device-only secret storage, `add mcp`, `secret set/rm/ls`, and `import` for
+  onboarding an existing machine. Credentials never enter the git-backed library.
 - ✅ **M2 complete** — projects and the full ladder: `.agent-sync.yaml` marker with
   auto-registration, resolver layers 3 and 1, project-scope deployment with minimum-copy placement
   for Cursor's cross-agent discovery, and `link`/`unlink`/`include`/`exclude`/`route`/`disable`/
@@ -30,20 +34,17 @@
 
 ## Next step (do this first)
 
-**Start M3 — MCP servers** ([roadmap](08-roadmap.md)). The riskiest milestone; the surgical editing
-it depends on is already built and verified (`src/core/formats/toml-edit.ts`, ADR 0007). Build order:
+**Next: M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the owner adopts the tool
+for real on both machines. Rehearse against a sandbox `HOME` seeded from the probe output first;
+nothing touches `~` until that is clean.
 
-1. Canonical MCP schema (`mcp/<id>.yaml`) + zod validation; secrets file and `${secret:}` /
-   `${env:}` indirection; `secret set` command (values via stdin, never argv).
-2. Pure translators: canonical → Claude JSON, Cursor JSON, Codex TOML, with round-trip property
-   tests and capability warnings for fields a dialect cannot express.
-3. Writers: `.mcp.json`, `~/.claude.json`, `~/.cursor/mcp.json` via jsonc-parser; `config.toml` via
-   the existing splicer. Back up before first edit; refuse to write an unparseable file.
-4. `add mcp` (flags, interactive, `--from <agent>`); wire mcp into `resolveTargets`.
-5. `import`: scan agent homes for existing skills and MCP servers and adopt them.
+Then **M4**: plugin declarations (Claude *and* Codex — see Q9), the agent-native pieces (the three
+interface skills, `INSTALL.md`, `setup`, heartbeat hooks), and OSS packaging for v1.0.
 
-Watch for: Claude's `enabledMcpjsonServers` approval arrays (docs/02 §5b) — decide explicitly
-whether agent-sync records approval, and say so in the docs.
+Carried into M4, decided in M3: agent-sync does **not** write Claude's `enabledMcpjsonServers`
+approval array. Writing `.mcp.json` leaves a project server pending Claude's own approval prompt,
+which is a security decision that belongs to the user. An opt-in flag can come later if the
+friction proves real during dogfooding.
 
 **Dogfooding is deliberately deferred to one acceptance phase before v1.0** — the owner wants to
 adopt the finished tool once, not migrate his real setup at each milestone. Do not stop and ask for

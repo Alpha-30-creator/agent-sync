@@ -8,6 +8,7 @@
  * Pure: locators are functions of MachineFacts, so a Windows layout can be resolved
  * while running on macOS.
  */
+import type { DialectSupport } from '../core/mcp/translate.js';
 import { joinPath, type MachineFacts, underHome } from '../core/model/machine.js';
 import type { AgentId, ArtifactType } from '../core/model/types.js';
 
@@ -37,6 +38,8 @@ export interface AgentCapabilities {
   readonly alsoDiscovers: readonly string[];
   readonly globalMcp: (facts: MachineFacts) => McpLocation | null;
   readonly projectMcp: (facts: MachineFacts, projectDir: string) => McpLocation | null;
+  /** What this agent's MCP dialect can express. */
+  readonly mcpDialect: DialectSupport;
 }
 
 export const CAPABILITIES: Readonly<Record<AgentId, AgentCapabilities>> = {
@@ -63,6 +66,12 @@ export const CAPABILITIES: Readonly<Record<AgentId, AgentCapabilities>> = {
       container: ['mcpServers'],
       shared: false,
     }),
+    mcpDialect: {
+      transports: ['stdio', 'http', 'sse'],
+      // Claude Code expands ${VAR} in its own config, so env references stay symbolic.
+      expandsEnvReferences: true,
+      tweaks: [],
+    },
   },
   codex: {
     id: 'codex',
@@ -87,6 +96,12 @@ export const CAPABILITIES: Readonly<Record<AgentId, AgentCapabilities>> = {
       container: ['mcp_servers'],
       shared: true,
     }),
+    mcpDialect: {
+      // Codex speaks stdio and streamable HTTP; sse has no equivalent there.
+      transports: ['stdio', 'http'],
+      expandsEnvReferences: false,
+      tweaks: ['startup_timeout_sec', 'tool_timeout_sec', 'enabled'],
+    },
   },
   cursor: {
     id: 'cursor',
@@ -110,6 +125,11 @@ export const CAPABILITIES: Readonly<Record<AgentId, AgentCapabilities>> = {
       container: ['mcpServers'],
       shared: false,
     }),
+    mcpDialect: {
+      transports: ['stdio', 'http', 'sse'],
+      expandsEnvReferences: true,
+      tweaks: ['envFile'],
+    },
   },
 };
 

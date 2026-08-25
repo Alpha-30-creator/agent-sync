@@ -7,8 +7,10 @@
  */
 import { Command } from 'commander';
 import { runApply, runStatus } from './commands/apply.js';
+import { runImport } from './commands/import.js';
 import { runClone, runInit } from './commands/init.js';
 import { runAddSkill, runNewSkill, runRemove, runSave } from './commands/library.js';
+import { runAddMcp, runSecret } from './commands/mcp.js';
 import { runInclude, runLink, runRoute, runToggle, runUnlink } from './commands/project.js';
 import { runDoctor, runSync } from './commands/sync.js';
 import { EXIT, failure } from './output.js';
@@ -155,6 +157,119 @@ add
         ...(options.id === undefined ? {} : { id: options.id }),
         ...(options.targets === undefined ? {} : { targets: options.targets }),
         ...(options.scope === 'project' ? { scope: 'project' as const } : {}),
+      }),
+    );
+  });
+
+add
+  .command('mcp')
+  .argument('<id>', 'lowercase-kebab id for the server')
+  .option('--command <command>', 'executable to launch (stdio servers)')
+  .option('--args <arg...>', 'arguments passed to the command')
+  .option('--url <url>', 'endpoint (remote servers)')
+  .option('--transport <transport>', 'http (default for --url) or sse')
+  .option('--env <pair...>', 'environment values as KEY=value; use ${secret:name} for credentials')
+  .option('--header <pair...>', 'headers as KEY=value (remote servers)')
+  .option('--targets <agent...>', 'agents this server should deploy to')
+  .description('add an MCP server definition to the library')
+  .action(
+    (
+      id: string,
+      options: {
+        command?: string;
+        args?: string[];
+        url?: string;
+        transport?: string;
+        env?: string[];
+        header?: string[];
+        targets?: string[];
+      },
+    ) => {
+      const g = globals();
+      run(
+        runAddMcp({
+          id,
+          json: g.json === true,
+          ...(g.store === undefined ? {} : { storeOverride: g.store }),
+          ...(options.command === undefined ? {} : { command: options.command }),
+          ...(options.args === undefined ? {} : { args: options.args }),
+          ...(options.url === undefined ? {} : { url: options.url }),
+          ...(options.transport === undefined ? {} : { transport: options.transport }),
+          ...(options.env === undefined ? {} : { env: options.env }),
+          ...(options.header === undefined ? {} : { header: options.header }),
+          ...(options.targets === undefined ? {} : { targets: options.targets }),
+        }),
+      );
+    },
+  );
+
+program
+  .command('import')
+  .description('adopt skills and MCP servers already on this machine')
+  .option('--adopt', 'actually bring them into the library (otherwise just reports)', false)
+  .option('--agent <agent...>', 'restrict the scan to these agents')
+  .action((options: { adopt: boolean; agent?: string[] }) => {
+    const g = globals();
+    run(
+      runImport({
+        adopt: options.adopt,
+        json: g.json === true,
+        ...(g.store === undefined ? {} : { storeOverride: g.store }),
+        ...(options.agent === undefined ? {} : { agents: options.agent }),
+      }),
+    );
+  });
+
+const secret = program
+  .command('secret')
+  .description('manage credentials, stored on this device only');
+
+secret
+  .command('set')
+  .argument('<name>', 'secret name, referenced as ${secret:name}')
+  .option('--stdin', 'read the value from stdin', false)
+  .description('store a secret value on this device')
+  .action(async (name: string, options: { stdin: boolean }) => {
+    const g = globals();
+    run(
+      await runSecret({
+        action: 'set',
+        name,
+        stdin: options.stdin,
+        json: g.json === true,
+        ...(g.store === undefined ? {} : { storeOverride: g.store }),
+      }),
+    );
+  });
+
+secret
+  .command('rm')
+  .argument('<name>', 'secret name')
+  .description('remove a secret from this device')
+  .action(async (name: string) => {
+    const g = globals();
+    run(
+      await runSecret({
+        action: 'rm',
+        name,
+        stdin: false,
+        json: g.json === true,
+        ...(g.store === undefined ? {} : { storeOverride: g.store }),
+      }),
+    );
+  });
+
+secret
+  .command('ls')
+  .description('list secret names stored on this device (never values)')
+  .action(async () => {
+    const g = globals();
+    run(
+      await runSecret({
+        action: 'ls',
+        stdin: false,
+        json: g.json === true,
+        ...(g.store === undefined ? {} : { storeOverride: g.store }),
       }),
     );
   });
@@ -372,4 +487,7 @@ program
     );
   });
 
-program.parse();
+program.parseAsync().catch((error: unknown) => {
+  failure(error instanceof Error ? error.message : String(error));
+  process.exitCode = EXIT.error;
+});

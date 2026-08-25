@@ -54,8 +54,13 @@ is a passing test, exercised against a sandbox project.
 - [ ] `import` for MCP + skills (the onboarding scan)
 - [ ] Skill pack: add-mcp reference incl. the secrets protocol (user runs `secret set` themselves)
 
-**Exit:** MCP round-trips through all three dialects against fixtures taken from the owner's real
-configs, with byte-exact surgical writes.
+**Exit:** ✅ done. MCP round-trips through all three dialects against fixtures taken from the
+owner's real configs, with byte-exact surgical writes; `import` adopts an existing machine and
+keeps credentials out of git.
+
+**Decided here:** agent-sync does not write Claude's `enabledMcpjsonServers` approval array (Q11).
+A project MCP server stays pending Claude's own prompt — silently answering a security question on
+the user's behalf is exactly the kind of liberty this tool refuses to take.
 
 ## M3.5 — Acceptance: dogfood the whole tool (owner + Claude, together)
 
@@ -100,4 +105,5 @@ once instead of migrating a real setup repeatedly.
 | Q7 | Cursor hooks: are the v1.7+ hook events stable/rich enough for the heartbeat, or is Cursor tier-0-only at launch? | M4 | Verify during M4; Claude Code hooks are the reference implementation either way |
 | Q9 | Codex plugins: how do `[plugins."id@mkt"]` + `[marketplaces.*]` behave (install path, non-interactive enable, marketplace `source_type` values)? Can one plugin declaration target both Claude and Codex, or do they need per-agent sources? | M4 | Model `plugin` as a two-agent type with per-agent source fields; verify before building the adapter |
 | Q10 | Should `~/.agents/skills` (shared convention seen in the wild, read by Cursor) be a first-class placement target that satisfies several agents at once? | M2 | Probably yes for project scope — it is exactly the minimum-copy strategy; verify which agents read it |
+| Q11 | Should an opt-in flag let `apply` record Claude's `enabledMcpjsonServers` approval for project MCP servers? | dogfood (M3.5) | Default stays "never"; add the flag only if the prompt proves genuinely annoying in real use |
 | Q8 | Skill-pack activation quality: do the three intent-split skills (`agent-sync-create-skill`, `agent-sync-add-mcp`, `agent-sync`) trigger reliably in all three agents — especially the two interceptors, which must beat the agent's native instinct? | dogfood (M2) | Three intent-based skills ([Agent-Native §4](09-agent-native.md)); tune descriptions on observed misses, merge only if redundant |

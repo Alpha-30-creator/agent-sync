@@ -10,9 +10,10 @@ import { basename, resolve } from 'node:path';
 import { parse, stringify } from 'yaml';
 import { apply } from '../../app/apply.js';
 import { type Context, describeFailure, loadContext } from '../../app/context.js';
+import { mcpSourcePath } from '../../app/mcp.js';
 import { type Manifest, parseManifest } from '../../core/manifest/schema.js';
 import { ID_PATTERN, parseArtifactRef } from '../../core/model/ids.js';
-import { AGENT_IDS, type AgentId } from '../../core/model/types.js';
+import { AGENT_IDS, type AgentId, ARTIFACT_TYPES } from '../../core/model/types.js';
 import { copyTree, ensureDir, readTextFile, removeTree, writeFileAtomic } from '../../shell/fs.js';
 import * as git from '../../store/git.js';
 import { skillDir } from '../../store/layout.js';
@@ -180,27 +181,46 @@ export const runRemove = (options: RemoveOptions): ExitCode => {
     failure(`cannot understand "${options.ref}"`);
     return EXIT.error;
   }
-  const id = parsed.value.id;
 
   const raw = parse(readTextFile(context.layout.manifest) ?? 'version: 1') as Manifest;
-  const skills = { ...raw.artifacts?.skill };
-  if (skills[id] === undefined) {
-    failure(`skill/${id} is not in the library`);
+  const { id } = parsed.value;
+
+  // A bare id is only usable when exactly one artifact type declares it.
+  const declaringTypes = ARTIFACT_TYPES.filter((type) => raw.artifacts?.[type]?.[id] !== undefined);
+  const type = parsed.value.type ?? declaringTypes[0];
+
+  if (type === undefined) {
+    failure(`${id} is not in the library`);
     return EXIT.error;
   }
-  delete skills[id];
-  writeManifest(context, { ...raw, artifacts: { ...raw.artifacts, skill: skills } });
-  removeTree(skillDir(context.layout, id));
+  if (parsed.value.type === null && declaringTypes.length > 1) {
+    failure(
+      `"${id}" is ambiguous — it exists as ${declaringTypes.map((t) => `${t}/${id}`).join(' and ')}`,
+    );
+    return EXIT.error;
+  }
+  if (raw.artifacts?.[type]?.[id] === undefined) {
+    failure(`${type}/${id} is not in the library`);
+    return EXIT.error;
+  }
 
-  // Deployed copies are cleaned up by the planner as orphans on the next apply.
+  const entries = { ...raw.artifacts?.[type] };
+  delete entries[id];
+  writeManifest(context, { ...raw, artifacts: { ...raw.artifacts, [type]: entries } });
+
+  // Remove the definition from the store; deployed copies are cleaned up as orphans
+  // by the apply below, which is also what removes MCP entries from agent configs.
+  if (type === 'skill') removeTree(skillDir(context.layout, id));
+  else if (type === 'mcp') removeTree(mcpSourcePath(context.layout.mcp, id));
+
   const reloaded = loadContext(options.storeOverride);
   if (reloaded.ok) apply(reloaded.value, { dryRun: false, answer: 'ask' });
 
   if (options.json) {
-    emitJson('rm', true, { ref: `skill/${id}` });
+    emitJson('rm', true, { ref: `${type}/${id}` });
     return EXIT.ok;
   }
-  success(`removed skill/${id} from the library and from every agent it was deployed to`);
+  success(`removed ${type}/${id} from the library and from every agent it was deployed to`);
   return EXIT.ok;
 };
 
