@@ -45,6 +45,13 @@ describe('parseArtifactRef', () => {
     expect(parseArtifactRef('github')).toEqual({ ok: true, value: { type: null, id: 'github' } });
   });
 
+  it('rejects a bare id with an invalid shape', () => {
+    expect(parseArtifactRef('Bad Id')).toEqual({
+      ok: false,
+      error: { kind: 'invalid-format', value: 'Bad Id' },
+    });
+  });
+
   it('trims surrounding whitespace', () => {
     expect(parseArtifactRef('  mcp/github  ')).toEqual({
       ok: true,

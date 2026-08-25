@@ -4,6 +4,13 @@
  * than none, so only close matches qualify.
  */
 
+/**
+ * Row access whose bounds are guaranteed by the loops below. Asserting here keeps the
+ * inner loop free of fallback branches that can never be taken — and therefore can
+ * never be tested, which the core's 100% branch gate would rightly flag.
+ */
+const at = (row: readonly number[], index: number): number => row[index] as number;
+
 /** Levenshtein edit distance. */
 export const editDistance = (a: string, b: string): number => {
   const prev: number[] = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -13,14 +20,14 @@ export const editDistance = (a: string, b: string): number => {
     curr[0] = i;
     for (let j = 1; j <= b.length; j += 1) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min((curr[j - 1] ?? 0) + 1, (prev[j] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
+      curr[j] = Math.min(at(curr, j - 1) + 1, at(prev, j) + 1, at(prev, j - 1) + cost);
     }
     for (let j = 0; j <= b.length; j += 1) {
-      prev[j] = curr[j] ?? 0;
+      prev[j] = at(curr, j);
     }
   }
 
-  return prev[b.length] ?? 0;
+  return at(prev, b.length);
 };
 
 /**

@@ -29,7 +29,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm check:deps
-      - run: pnpm test
+      # Runs the suite *and* enforces the 100% core branch threshold (ADR 0004).
+      - run: pnpm coverage
 
   node20-compat:
     name: node 20 runtime compat

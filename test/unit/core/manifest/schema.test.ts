@@ -40,6 +40,12 @@ describe('parseManifest', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('reports a root-level error when the document is not an object', () => {
+    const result = parseManifest('version: 1');
+    if (result.ok) throw new Error('expected failure');
+    expect(result.issues[0]?.path).toBe('<root>');
+  });
+
   it('rejects an unknown version', () => {
     const result = parseManifest({ version: 2 });
     expect(result).toMatchObject({ ok: false });
@@ -156,6 +162,33 @@ describe('semantic validation', () => {
     if (result.ok) throw new Error('expected failure');
     expect(result.issues[0]?.path).toBe('projects.acme.artifacts.skill.ghost');
     expect(result.issues[0]?.message).toContain('not declared under artifacts');
+  });
+
+  it('validates references in a project private list', () => {
+    const result = parseManifest({
+      version: 1,
+      artifacts: { mcp: { github: {} } },
+      projects: { acme: { include: ['mcp/github'], private: ['mcp/ghost'] } },
+    });
+    if (result.ok) throw new Error('expected failure');
+    expect(result.issues[0]?.path).toBe('projects.acme.private[0]');
+  });
+
+  it('accepts a project whose references all resolve', () => {
+    expect(
+      parseManifest({
+        version: 1,
+        artifacts: { mcp: { github: {} }, skill: { notes: {} } },
+        projects: {
+          acme: {
+            include: ['mcp/github', 'skill/notes'],
+            private: ['mcp/github'],
+            artifacts: { skill: { notes: { targets: ['cursor'] } } },
+            remote: 'github.com/abdur/acme',
+          },
+        },
+      }).ok,
+    ).toBe(true);
   });
 
   it('requires a marketplace source for plugins', () => {

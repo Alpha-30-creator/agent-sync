@@ -43,7 +43,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "check:deps": "depcruise src --config .dependency-cruiser.cjs",
-    "verify": "pnpm typecheck && pnpm lint && pnpm check:deps && pnpm test"
+    "verify": "pnpm typecheck && pnpm lint && pnpm check:deps && pnpm coverage"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

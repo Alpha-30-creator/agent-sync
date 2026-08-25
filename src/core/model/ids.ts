@@ -44,15 +44,16 @@ export const parseArtifactRef = (raw: string): Result<PartialArtifactRef, RefErr
   const input = raw.trim();
   if (input.length === 0) return err({ kind: 'empty' });
 
-  const segments = input.split('/');
-  if (segments.length > 2) return err({ kind: 'too-many-segments', value: input });
-
-  if (segments.length === 1) {
-    const id = parseId(segments[0] ?? '');
-    return id.ok ? ok({ type: null, id: id.value }) : err(id.error);
+  const slash = input.indexOf('/');
+  if (slash === -1) {
+    const bare = parseId(input);
+    return bare.ok ? ok({ type: null, id: bare.value }) : err(bare.error);
   }
 
-  const rawType = segments[0] ?? '';
+  const rawType = input.slice(0, slash);
+  const remainder = input.slice(slash + 1);
+  if (remainder.includes('/')) return err({ kind: 'too-many-segments', value: input });
+
   const type = ARTIFACT_TYPES.find((t): t is ArtifactType => t === rawType);
   if (type === undefined) {
     return err({
@@ -62,7 +63,7 @@ export const parseArtifactRef = (raw: string): Result<PartialArtifactRef, RefErr
     });
   }
 
-  const id = parseId(segments[1] ?? '');
+  const id = parseId(remainder);
   return id.ok ? ok({ type, id: id.value }) : err(id.error);
 };
 

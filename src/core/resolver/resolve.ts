@@ -13,15 +13,20 @@ import type { Device, Manifest, TargetSpec } from '../manifest/schema.js';
 import { formatArtifactRef } from '../model/ids.js';
 import type { AgentId, ArtifactType, Scope } from '../model/types.js';
 
-/** Where a target set came from, for `--why` output. */
-export interface Provenance {
+/**
+ * Where a target set came from, for `--why` output. A derived provenance always
+ * carries its modifiers, so no consumer has to handle a half-populated chain.
+ */
+export type Provenance =
   /** Manifest path of the winning rule, or `<built-in>`. */
-  readonly rule: string;
-  /** Rule the winning spec was derived from, when it used add/remove. */
-  readonly derivedFrom?: string;
-  /** Human-readable modifiers applied, e.g. `+codex`, `-claude`. */
-  readonly modifiers?: readonly string[];
-}
+  | { readonly rule: string }
+  | {
+      readonly rule: string;
+      /** Rule the winning spec was derived from. */
+      readonly derivedFrom: string;
+      /** Modifiers applied, e.g. `+codex`, `-claude`. */
+      readonly modifiers: readonly string[];
+    };
 
 export interface Deployment {
   readonly type: ArtifactType;
@@ -119,10 +124,7 @@ export const resolveGlobal = (input: ResolveInput): RoutingTable => {
   for (const type of ['skill', 'mcp', 'plugin'] as const) {
     const entries = manifest.artifacts?.[type] ?? {};
 
-    for (const id of Object.keys(entries).sort()) {
-      const entry = entries[id];
-      if (entry === undefined) continue;
-
+    for (const [id, entry] of Object.entries(entries).sort(([a], [b]) => a.localeCompare(b))) {
       const ref = formatArtifactRef({ type, id });
       if (entry.scope === 'project') continue; // deployed only via project includes
 
@@ -172,7 +174,7 @@ export const resolveGlobal = (input: ResolveInput): RoutingTable => {
 
 /** One-line explanation of why a deployment happened, for `status --why`. */
 export const explain = (deployment: Deployment): string => {
-  const { rule, derivedFrom, modifiers } = deployment.provenance;
-  if (derivedFrom === undefined) return rule;
-  return `${derivedFrom} then ${rule} (${(modifiers ?? []).join(' ')})`;
+  const provenance = deployment.provenance;
+  if (!('derivedFrom' in provenance)) return provenance.rule;
+  return `${provenance.derivedFrom} then ${provenance.rule} (${provenance.modifiers.join(' ')})`;
 };

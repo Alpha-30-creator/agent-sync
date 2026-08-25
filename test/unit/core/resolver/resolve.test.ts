@@ -71,12 +71,46 @@ describe('the precedence ladder', () => {
     );
   });
 
+  it('explains a simple rule as just that rule', () => {
+    const table = resolve({
+      version: 1,
+      defaults: { skill: { targets: ['claude'] } },
+      artifacts: { skill: { a: {} } },
+    });
+    expect(explain(table.deployments[0] as never)).toBe('defaults.skill.targets');
+  });
+
   it('subtracts with remove, and ignores an add that is already present', () => {
     const table = resolve({
       version: 1,
       artifacts: { skill: { a: { targets: { remove: ['claude'], add: ['cursor'] } } } },
     });
     expect(agentsFor(table, 'skill/a')).toEqual(['codex', 'cursor']);
+  });
+
+  it('supports a remove-only relative rule', () => {
+    const table = resolve({
+      version: 1,
+      artifacts: { skill: { a: { targets: { remove: ['codex', 'cursor'] } } } },
+    });
+    expect(agentsFor(table, 'skill/a')).toEqual(['claude']);
+    const provenance = table.deployments[0]?.provenance;
+    expect(provenance && 'modifiers' in provenance && provenance.modifiers).toEqual([
+      '-codex',
+      '-cursor',
+    ]);
+  });
+
+  it('stacks relative rules against a built-in default', () => {
+    const table = resolve({
+      version: 1,
+      artifacts: { skill: { a: { targets: { add: ['claude'] } } } },
+    });
+    expect(agentsFor(table, 'skill/a')).toEqual(['claude', 'codex', 'cursor']);
+  });
+
+  it('resolves an empty manifest to nothing', () => {
+    expect(resolve({ version: 1 }).deployments).toEqual([]);
   });
 
   it('ignores project-scoped artifacts when resolving global scope', () => {
