@@ -28,7 +28,7 @@ Concrete technology choices, each with its reasoning and the alternatives consid
 | Lint/format | **Biome** | One fast tool for both; plus `eslint-plugin-import` alternative if Biome's boundary rules prove insufficient — the *dependency-direction rule* (core imports no I/O) must be machine-enforced, via `dependency-cruiser` in CI |
 | Test runner | **Vitest** | See [Testing](07-testing.md) |
 | Property testing | **fast-check** | The resolver/planner invariants are property-shaped |
-| CI | **GitHub Actions** | Matrix: {ubuntu, macos, windows} × {Node 20, 22, 24} |
+| CI | **GitHub Actions** | Matrix: {ubuntu, macos, windows} × {Node 22, 24} + a node 20 runtime-compat job |
 | Releases | **Changesets** + npm publish via CI | Semver, changelog generation, provenance-signed publish |
 
 ## 3. Key libraries

@@ -69,7 +69,7 @@ E2E count stays small (~20 scenarios); they're the slowest and least precise lay
 
 ```
 GitHub Actions, per PR:
-  test:      {ubuntu-latest, macos-latest, windows-latest} × {node 20, 22, 24}
+  test:      {ubuntu-latest, macos-latest, windows-latest} × {node 22, 24} (+ node 20 runtime-compat job)
              → typecheck, lint, dependency-direction check (dependency-cruiser),
                unit + property + integration + e2e, coverage upload
   gates:     core branch coverage ≥ 100%*, overall line coverage ≥ 90%

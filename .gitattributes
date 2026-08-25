@@ -1,0 +1,6 @@
+# LF in the working tree on every OS. Windows CI checked out CRLF and failed the
+# formatter; more importantly, agent-sync hashes deployed file content byte-exactly,
+# so line endings must never depend on which machine cloned the repo.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
