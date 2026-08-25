@@ -303,8 +303,17 @@ export const resolveProjects = (
   return { deployments, diagnostics };
 };
 
-/** `type/id` as written in a project's include list. Validation already accepted it. */
-const parseIncludeReference = (reference: string): { type: ArtifactType; id: string } | null => {
+/**
+ * `type/id` as written in a project's include list.
+ *
+ * Manifest validation already rejects references that are malformed or point at
+ * undeclared artifacts, so the null results are unreachable from `resolveProjects`.
+ * They are kept, exported, and tested anyway: resolution must stay total (invariant 1)
+ * even if validation is ever loosened.
+ */
+export const parseIncludeReference = (
+  reference: string,
+): { type: ArtifactType; id: string } | null => {
   const slash = reference.indexOf('/');
   if (slash === -1) return null;
   const type = reference.slice(0, slash);

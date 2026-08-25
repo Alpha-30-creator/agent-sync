@@ -136,6 +136,18 @@ describe('project-scope resolution', () => {
     expect(table.deployments).toEqual([]);
   });
 
+  it('deploys nothing for a freshly linked project that includes nothing yet', () => {
+    // This is the state immediately after `agent-sync link`: the project exists in the
+    // manifest and is mapped on this device, but nothing has been included.
+    const table = resolve({
+      version: 1,
+      artifacts: { skill: { a: {} } },
+      projects: { 'acme-app': { remote: 'github.com/abdur/acme-app' } },
+    });
+    expect(table.deployments).toEqual([]);
+    expect(table.diagnostics).toEqual([]);
+  });
+
   it('deploys only what the project includes', () => {
     const table = resolve({
       version: 1,
@@ -218,5 +230,46 @@ describe('project-scope resolution', () => {
       ['acme-app', 'cursor'],
       ['side-quest', 'claude'],
     ]);
+  });
+});
+
+describe('include reference parsing', () => {
+  it('parses a well-formed reference', async () => {
+    const { parseIncludeReference } = await import('../../../../src/core/resolver/resolve.js');
+    expect(parseIncludeReference('skill/db-migrate')).toEqual({ type: 'skill', id: 'db-migrate' });
+    expect(parseIncludeReference('mcp/github')).toEqual({ type: 'mcp', id: 'github' });
+  });
+
+  it('refuses anything validation would have rejected, rather than guessing', async () => {
+    const { parseIncludeReference } = await import('../../../../src/core/resolver/resolve.js');
+    // No type prefix.
+    expect(parseIncludeReference('db-migrate')).toBeNull();
+    // Unknown artifact type.
+    expect(parseIncludeReference('rules/house-style')).toBeNull();
+  });
+});
+
+describe('totality (invariant 1)', () => {
+  it('skips a malformed include instead of throwing, even on unvalidated input', () => {
+    // Deliberately bypasses parseManifest: resolution must stay total for *any* input
+    // shape, so that a future change to validation cannot turn a bad reference into a
+    // crash in the middle of an apply.
+    const manifest = {
+      version: 1 as const,
+      artifacts: { skill: { good: {} } },
+      projects: { 'acme-app': { include: ['not-a-reference', 'skill/good'] } },
+    };
+    const device = parseDevice({
+      device: 'macbook',
+      agents: ['claude'],
+      projects: { 'acme-app': '/dev/acme-app' },
+    });
+    if (!device.ok) throw new Error('device fixture invalid');
+
+    const table = resolveProjects(
+      { manifest, device: device.value, supports, allAgents: AGENT_IDS },
+      [ACME],
+    );
+    expect(table.deployments.map((d) => d.id)).toEqual(['good']);
   });
 });
