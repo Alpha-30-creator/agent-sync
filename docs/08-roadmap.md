@@ -10,7 +10,7 @@ De-risk the two things the whole design leans on, before writing product code.
 
 - [x] **Probe tooling:** `scripts/probe.mjs` reports layout + file shape (never contents) on any OS.
 - [x] **Landscape verification — macOS:** all three agents probed; Cursor global skills dir confirmed (Q1 resolved); **Codex plugin system discovered** (Q9 raised); symlinked third-party skills found in the wild (Q10 raised). Recorded in [Agent Landscape §5a](02-agent-landscape.md).
-- [ ] **Landscape verification — Windows:** owner runs `node scripts/probe.mjs --json` on the Windows machine; record results and resolve Q6.
+- [x] **Landscape verification — Windows 11:** layout identical to macOS (Q6 resolved); Codex plugins confirmed cross-platform; agent versions drift between the owner's machines, so `verifiedAgainst` must be a range.
 - [ ] **Positive MCP tests:** add a throwaway server via each agent's own CLI/UI, re-probe, and confirm exactly which file each agent writes (the Mac has no Claude MCP servers configured, so its location is still unconfirmed).
 - [ ] Encode all of the above as the first `capability-table.ts` with `verifiedAgainst` versions.
 - [ ] **TOML surgical-edit spike:** take the author's real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
@@ -82,7 +82,7 @@ The narrowest full slice: **global-scope skills, all three agents, two devices.*
 | Q3 | Claude plugin install non-interactively: CLI flags vs settings-write-and-let-fetch | M4 | CLI-first |
 | Q4 | Should `sync` auto-commit store changes, or require explicit `agent-sync commit` for users who want curated history? | M1 | Auto-commit with generated messages; `--no-commit` escape hatch |
 | Q5 | Manifest ergonomics: is the YAML nesting depth acceptable in practice, or does v1.1 need a flatter rule syntax? | dogfood | Decide from real usage, not speculation |
-| Q6 | Windows: any agent storing per-user config under `%APPDATA%` rather than `%USERPROFILE%` dot-dirs? | M0 | Verify on the real Windows machine; encode in locators |
+| ~~Q6~~ | ~~Windows: any agent storing per-user config under `%APPDATA%`?~~ | ~~M0~~ | **Resolved 2026-08-25:** no — all three use `%USERPROFILE%` dot-dirs identically to macOS. `%APPDATA%\Cursor` is Electron app state, not agent config ([landscape §5a](02-agent-landscape.md)) |
 | Q7 | Cursor hooks: are the v1.7+ hook events stable/rich enough for the heartbeat, or is Cursor tier-0-only at launch? | M4 | Verify during M4; Claude Code hooks are the reference implementation either way |
 | Q9 | Codex plugins: how do `[plugins."id@mkt"]` + `[marketplaces.*]` behave (install path, non-interactive enable, marketplace `source_type` values)? Can one plugin declaration target both Claude and Codex, or do they need per-agent sources? | M4 | Model `plugin` as a two-agent type with per-agent source fields; verify before building the adapter |
 | Q10 | Should `~/.agents/skills` (shared convention seen in the wild, read by Cursor) be a first-class placement target that satisfies several agents at once? | M2 | Probably yes for project scope — it is exactly the minimum-copy strategy; verify which agents read it |

@@ -122,7 +122,19 @@ contents), so its output is safe to paste into an issue.
 | `~/.codex/skills/<name>` and `~/.cursor/skills/<name>` are **symlinks** into `~/.agents/skills/` (created by another skills tool) | Two consequences: (a) `import`/drift logic must recognize symlinked entries as *unmanaged* and never clobber them; (b) `~/.agents/skills` is an emerging shared convention worth supporting as a placement target |
 | Codex `config.toml` currently has no comments | Slightly lowers TOML round-trip risk for this user, but the requirement stands for everyone else |
 
-**Windows** — pending; run the same probe and record results here.
+**Windows 11 (10.0.22631), 2026-08-25** — verified against Claude Code `2.1.245`,
+`codex-cli 0.149.1`, `cursor-agent 2026.08.11`:
+
+| Finding | Consequence |
+|---|---|
+| All three agents use `%USERPROFILE%` dot-directories, exactly as on macOS: `C:\Users\<u>\.claude\`, `.claude.json`, `.codex\`, `.cursor\` | **Resolves Q6.** No `%APPDATA%` variants for agent *config* — locators differ only by separator and home resolution, not by layout |
+| The one `%APPDATA%` hit is `AppData\Roaming\Cursor` — Electron app state (`Cache`, `IndexedDB`, `languagepacks.json`, `Backups`) | Editor application state, **not** agent config. Never a deployment target; `doctor` should not report it as a candidate |
+| `~/.claude/skills`, `~/.claude/plugins`, and `~/.cursor/skills` **do not exist** on this machine | Agents create these lazily. Writers must create the full directory chain, and their absence means "no skills yet", never "agent missing" — agent detection keys on the CLI/config, not on skill dirs |
+| Codex on Windows also carries `[plugins."…@…"]` + `[marketplaces.*]`, plus a platform-specific `[windows]` table | Confirms the Codex plugin system is not a macOS-only preview (Q9). The `[windows]` table is another region of `config.toml` the surgical editor must leave alone |
+| Codex `config.toml` has **no** `projects.*` tables here (macOS has 8) | Those accrue with use; project-scope Codex behaviour must be probed on a machine that has them |
+| `~/.claude.json` again has **no** `mcpServers` key (35 KB of other state) | Claude's global MCP location remains unconfirmed on *both* machines — the positive test (add a server via `claude mcp add`, re-probe) is still the outstanding M0 item |
+| `~/.agents/skills` does not exist here, though it does on macOS | The shared-convention directory is created by third-party tooling, not by the agents. Support it opportunistically (Q10); never assume it |
+| Agent versions differ across the owner's own two machines (Claude 2.1.153 vs 2.1.245, codex 0.134.0 vs 0.149.1, cursor-agent May vs Aug) | `verifiedAgainst` in the capability table must be a *range or list*, not a single version, and `doctor` should flag an installed version outside the verified set rather than assuming the layout holds |
 
 ## 6. Sources
 

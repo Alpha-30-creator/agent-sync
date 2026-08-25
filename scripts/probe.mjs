@@ -6,16 +6,30 @@
  * and the SHAPE of those files — never their contents. Values are replaced by type
  * descriptors, so the output is safe to paste into an issue or a chat.
  *
- * Usage:  node scripts/probe.mjs            # human-readable
- *         node scripts/probe.mjs --json     # machine-readable
+ * Usage:  node scripts/probe.mjs                     # human-readable
+ *         node scripts/probe.mjs --json              # machine-readable to stdout
+ *         node scripts/probe.mjs --out probe.json    # machine-readable to a UTF-8 file
+ *
+ * Prefer --out on Windows: PowerShell's `>` redirect writes UTF-16, which is awkward
+ * to read back and lands in git as a binary blob.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir, platform, release } from 'node:os';
 import { join } from 'node:path';
 
 const HOME = homedir();
 const asJson = process.argv.includes('--json');
+const outIndex = process.argv.indexOf('--out');
+const outPath = outIndex === -1 ? null : process.argv[outIndex + 1];
 const IS_WINDOWS = platform() === 'win32';
 
 const describe = (value) => {
@@ -174,7 +188,10 @@ const report = {
   windowsRoots: windowsRoots(),
 };
 
-if (asJson) {
+if (outPath) {
+  writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  console.log(`Wrote ${outPath} (UTF-8). Structure only — no file contents, no secrets.`);
+} else if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
   console.log(`agent-sync probe — ${report.system.platform} ${report.system.release}, node ${report.system.node}`);

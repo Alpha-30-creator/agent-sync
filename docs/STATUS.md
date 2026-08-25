@@ -12,7 +12,7 @@
 - ✅ Repo scaffolding: TS/ESM, pnpm, vitest, biome, dependency-cruiser, 3-OS CI matrix (20/22/24).
 - ✅ First core modules: `Result`, `suggest`, domain types, id/ref parsing (42 tests green).
 - ✅ M0 probe tooling (`scripts/probe.mjs`) + **macOS verification done** — findings in `docs/02-agent-landscape.md §5a`.
-- ⬜ M0 — **Windows verification pending (owner)**: `node scripts/probe.mjs --json` on the Windows machine.
+- ✅ M0 — **Windows verification done**: same `%USERPROFILE%` dot-dir layout as macOS (Q6 resolved).
 - ⬜ M0 — positive MCP location tests (add a dummy server per agent, re-probe).
 - ⬜ M0 spike 2 — surgical TOML/JSON edit fidelity against real config files.
 - ⬜ M1 — skills end to end (global scope, 3 agents, 2 devices).
