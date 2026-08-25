@@ -135,7 +135,9 @@ describe('adding an MCP server once and getting it everywhere', () => {
       '--env',
       'GITHUB_TOKEN=${secret:github-token}',
     ]);
-    expect(result.code).toBe(2); // converged with a warning
+    // The CLI's own output is attached to the assertion, so a platform-specific
+    // failure explains itself in CI rather than only showing an exit code.
+    expect(result.code, result.stdout).toBe(2); // converged with a warning
     expect(result.stdout).toContain('secret set github-token');
   });
 
@@ -148,7 +150,8 @@ describe('adding an MCP server once and getting it everywhere', () => {
   });
 
   it('deploys the server to all three agents', () => {
-    expect(run(['apply']).code).toBe(0);
+    const applied = run(['apply']);
+    expect(applied.code, applied.stdout).toBe(0);
 
     expect(readJson(join(home, '.claude.json')).mcpServers).toHaveProperty('github');
     expect(readJson(join(home, '.cursor', 'mcp.json')).mcpServers).toHaveProperty('github');
