@@ -1,0 +1,4 @@
+# esbuild (vitest's bundler) must link its platform binary at install time.
+# Allowlisted explicitly rather than enabling build scripts wholesale (docs/05-tech-stack.md §6).
+allowBuilds:
+  esbuild: true

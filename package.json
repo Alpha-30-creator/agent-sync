@@ -1,0 +1,57 @@
+{
+  "name": "agent-sync",
+  "version": "0.0.0",
+  "description": "Sync skills, MCP servers, and plugins across coding agents and devices",
+  "keywords": [
+    "agent-skills",
+    "mcp",
+    "claude-code",
+    "codex",
+    "cursor",
+    "sync",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Muhammad Abdur Rahman Saad",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alpha-30-creator/agent-sync.git"
+  },
+  "homepage": "https://github.com/Alpha-30-creator/agent-sync#readme",
+  "bugs": {
+    "url": "https://github.com/Alpha-30-creator/agent-sync/issues"
+  },
+  "type": "module",
+  "bin": {
+    "agent-sync": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check:deps": "depcruise src --config .dependency-cruiser.cjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm check:deps && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "dependency-cruiser": "^17.0.0",
+    "fast-check": "^4.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
