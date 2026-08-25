@@ -6,7 +6,7 @@
  * all.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,12 +56,25 @@ const run = (args: readonly string[], input?: string) => {
 const readJson = (path: string): Record<string, never> =>
   parseJsonc(readFileSync(path, 'utf8')) as Record<string, never>;
 
+/**
+ * Search the whole library for a string, in Node rather than via grep: the point of
+ * this suite is that it behaves identically on Windows, and shelling out to grep does
+ * not.
+ */
 const storeContains = (needle: string): boolean => {
-  const output = execFileSync('grep', ['-r', '-l', needle, join(home, '.agent-sync', 'store')], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
-  }).trim();
-  return output.length > 0;
+  const walk = (dir: string): boolean => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === '.git') continue;
+        if (walk(path)) return true;
+        continue;
+      }
+      if (readFileSync(path, 'utf8').includes(needle)) return true;
+    }
+    return false;
+  };
+  return walk(join(home, '.agent-sync', 'store'));
 };
 
 beforeAll(() => {
@@ -147,7 +160,7 @@ describe('adding an MCP server once and getting it everywhere', () => {
   it('resolves the secret into the agent configs but never into the library', () => {
     expect(readFileSync(join(home, '.codex', 'config.toml'), 'utf8')).toContain(TOKEN);
     expect(storeContains('${secret:github-token}')).toBe(true);
-    expect(() => storeContains(TOKEN)).toThrow(); // grep exits non-zero: no match anywhere
+    expect(storeContains(TOKEN)).toBe(false);
   });
 
   it('leaves every unrelated part of those files intact', () => {
