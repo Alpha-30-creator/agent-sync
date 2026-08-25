@@ -5,8 +5,8 @@
 import { type ApplyOptions, apply, type DriftAnswer, planApply } from '../../app/apply.js';
 import { type Context, describeFailure, loadContext } from '../../app/context.js';
 import { AGENT_IDS, type AgentId } from '../../core/model/types.js';
-import { exitCodeFor, exitCodeFrom } from '../../core/planner/plan.js';
-import { explain } from '../../core/resolver/resolve.js';
+import { coveredAgents, exitCodeFor, exitCodeFrom } from '../../core/planner/plan.js';
+import { explain, warnings } from '../../core/resolver/resolve.js';
 import { EXIT, type ExitCode, emitJson, failure, info, line, success, warn } from '../output.js';
 
 export interface ApplyCommandOptions {
@@ -16,6 +16,7 @@ export interface ApplyCommandOptions {
   readonly adopt: boolean;
   readonly overwrite: boolean;
   readonly agents?: readonly string[];
+  readonly project?: string;
 }
 
 const answerFrom = (options: ApplyCommandOptions): DriftAnswer =>
@@ -54,12 +55,13 @@ export const runApply = (options: ApplyCommandOptions): ExitCode =>
       dryRun: options.dryRun,
       answer: answerFrom(options),
       ...(selected === undefined ? {} : { agents: selected }),
+      ...(options.project === undefined ? {} : { project: options.project }),
     };
 
     const result = apply(context, applyOptions);
     // Questions answered by --adopt/--overwrite are settled; only what is still
     // outstanding may push the exit code to "needs a decision".
-    const code = exitCodeFrom(result.unresolved.length, result.plan.diagnostics.length);
+    const code = exitCodeFrom(result.unresolved.length, warnings(result.plan.diagnostics).length);
 
     if (options.json) {
       emitJson('apply', true, {
@@ -134,6 +136,8 @@ export const runStatus = (options: StatusOptions): ExitCode =>
         targets: targets.map((target) => ({
           ref: `${target.deployment.type}/${target.deployment.id}`,
           agent: target.deployment.agent,
+          serves: coveredAgents(target),
+          scope: target.deployment.scope,
           path: target.path,
           why: explain(target.deployment),
         })),
@@ -158,16 +162,21 @@ export const runStatus = (options: StatusOptions): ExitCode =>
     }
 
     const refs = [...new Set(targets.map((t) => `${t.deployment.type}/${t.deployment.id}`))].sort();
-    const agents = [...new Set(targets.map((t) => t.deployment.agent))];
+    // A single write can serve several agents, so the columns come from what targets
+    // actually cover — otherwise an agent served by a shared copy reads as "excluded".
+    const agents = [...new Set(targets.flatMap(coveredAgents))];
 
     line(`${'artifact'.padEnd(28)}${agents.map((a) => a.padEnd(14)).join('')}`);
     for (const ref of refs) {
       const cells = agents.map((agent) => {
         const target = targets.find(
-          (t) => `${t.deployment.type}/${t.deployment.id}` === ref && t.deployment.agent === agent,
+          (t) =>
+            `${t.deployment.type}/${t.deployment.id}` === ref && coveredAgents(t).includes(agent),
         );
         if (target === undefined) return '– excluded'.padEnd(14);
-        return (SYMBOL[stateByKey.get(`${ref}@${agent}`) ?? 'in-sync'] ?? '?').padEnd(14);
+        const state = stateByKey.get(`${ref}@${target.deployment.agent}`) ?? 'in-sync';
+        const shared = target.deployment.agent !== agent;
+        return `${SYMBOL[state] ?? '?'}${shared ? '*' : ''}`.padEnd(14);
       });
       line(`${ref.padEnd(28)}${cells.join('')}`);
       if (options.why) {
@@ -176,6 +185,9 @@ export const runStatus = (options: StatusOptions): ExitCode =>
       }
     }
 
+    if (targets.some((t) => coveredAgents(t).length > 1)) {
+      info('\n* served by a copy written for another agent, which also reads that directory');
+    }
     for (const diagnostic of plan.diagnostics) info(`\nnote: ${diagnostic.message}`);
     if (plan.operations.length > 0)
       info(`\n${plan.operations.length} change(s) pending — run "agent-sync apply"`);

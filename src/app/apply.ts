@@ -15,7 +15,7 @@ import {
 } from '../adapters/skills.js';
 import { AGENT_IDS, type AgentId } from '../core/model/types.js';
 import { buildPlan, type Plan, type TargetState } from '../core/planner/plan.js';
-import { type Deployment, resolveGlobal } from '../core/resolver/resolve.js';
+import { type Deployment, resolveGlobal, resolveProjects } from '../core/resolver/resolve.js';
 import { treeHash } from '../shell/fs.js';
 import {
   forget,
@@ -26,7 +26,9 @@ import {
   record,
   saveLockfile,
 } from '../store/lockfile.js';
+import { linkedProjects } from '../store/project.js';
 import type { Context } from './context.js';
+import { projectTargets } from './projects.js';
 
 /** How to answer questions the plan raises, when running non-interactively. */
 export type DriftAnswer = 'ask' | 'adopt' | 'overwrite';
@@ -36,6 +38,8 @@ export interface ApplyOptions {
   readonly answer: DriftAnswer;
   /** Restrict the run to these agents. */
   readonly agents?: readonly AgentId[];
+  /** Restrict the run to one project. */
+  readonly project?: string;
 }
 
 export interface ApplyResult {
@@ -50,22 +54,29 @@ const refOf = (deployment: Deployment): string => `${deployment.type}/${deployme
 
 /** Stage 1–2: resolve the manifest into targets that exist on this machine. */
 export const resolveTargets = (context: Context, options: ApplyOptions) => {
-  const table = resolveGlobal({
+  const input = {
     manifest: context.manifest,
     device: context.device,
     supports: supportsArtifact,
     allAgents: AGENT_IDS,
-  });
+  };
+
+  const global = resolveGlobal(input);
+  const projects = linkedProjects(context.device, Object.keys(context.manifest.projects ?? {}));
+  const projectRoutes = resolveProjects(input, projects);
 
   const wanted = options.agents;
-  const deployments = table.deployments.filter(
-    (deployment) =>
-      // M1 handles skills; mcp and plugin adapters arrive in M3 and M4.
-      deployment.type === 'skill' && (wanted === undefined || wanted.includes(deployment.agent)),
-  );
+  const wantedProject = options.project;
+
+  const keep = (deployment: Deployment): boolean =>
+    // M1/M2 handle skills; mcp and plugin adapters arrive in M3 and M4.
+    deployment.type === 'skill' &&
+    (wanted === undefined || wanted.includes(deployment.agent)) &&
+    (wantedProject === undefined ||
+      (deployment.scope.kind === 'project' && deployment.scope.projectId === wantedProject));
 
   const targets: TargetState[] = [];
-  for (const deployment of deployments) {
+  for (const deployment of global.deployments.filter(keep)) {
     const path = skillTargetPath(context.facts, deployment.agent, deployment.id);
     if (path === null) continue;
 
@@ -81,7 +92,23 @@ export const resolveTargets = (context: Context, options: ApplyOptions) => {
     });
   }
 
-  return { table, targets };
+  const fromProjects = projectTargets(
+    context,
+    projectRoutes.deployments.filter(keep),
+    new Map(projects.map((project) => [project.id, project.localPath])),
+  );
+
+  return {
+    table: {
+      deployments: [...global.deployments, ...projectRoutes.deployments],
+      diagnostics: [
+        ...global.diagnostics,
+        ...projectRoutes.diagnostics,
+        ...fromProjects.diagnostics,
+      ],
+    },
+    targets: [...targets, ...fromProjects.targets],
+  };
 };
 
 /** Stages 1–3: everything a dry run needs. */

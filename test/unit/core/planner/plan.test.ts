@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Observation } from '../../../../src/core/drift/classify.js';
 import {
   buildPlan,
+  coveredAgents,
   exitCodeFor,
   isConverged,
   type PlanInput,
@@ -102,6 +103,17 @@ describe('buildPlan', () => {
   });
 });
 
+describe('coveredAgents', () => {
+  it('defaults to the deployment’s own agent', () => {
+    expect(coveredAgents(target('a', {}))).toEqual(['claude']);
+  });
+
+  it('reports every agent a shared project copy serves', () => {
+    const shared: TargetState = { ...target('a', {}), covers: ['codex', 'cursor'] };
+    expect(coveredAgents(shared)).toEqual(['codex', 'cursor']);
+  });
+});
+
 describe('exit code contract', () => {
   it('0 when converged, 2 with diagnostics, 3 when a decision is needed', () => {
     expect(exitCodeFor(plan({}))).toBe(0);
@@ -194,5 +206,45 @@ describe('exitCodeFrom', () => {
     expect(exitCodeFrom(1, 0)).toBe(3);
     // A question answered by --adopt is settled, even though the plan still lists it.
     expect(exitCodeFrom(0, 1)).toBe(2);
+  });
+});
+
+describe('diagnostic severity', () => {
+  it('only warnings colour the exit code', async () => {
+    const { severityOf, warnings } = await import('../../../../src/core/resolver/resolve.js');
+
+    // Sharing one copy between agents is how correct placement works, not a problem.
+    expect(
+      severityOf({ kind: 'placement-shared', ref: 'skill/a', agent: 'cursor', message: '' }),
+    ).toBe('info');
+    // The user disabled it here deliberately.
+    expect(severityOf({ kind: 'artifact-disabled', ref: 'skill/a', message: '' })).toBe('info');
+
+    // These mean the tool could not do what was asked.
+    expect(
+      severityOf({ kind: 'capability-unsupported', ref: 'p/a', agent: 'cursor', message: '' }),
+    ).toBe('warning');
+    expect(severityOf({ kind: 'device-masked', ref: 'skill/a', agent: 'codex', message: '' })).toBe(
+      'warning',
+    );
+    expect(
+      severityOf({ kind: 'not-excludable', ref: 'skill/a', agent: 'cursor', message: '' }),
+    ).toBe('warning');
+
+    expect(
+      warnings([
+        { kind: 'placement-shared', ref: 'skill/a', agent: 'cursor', message: '' },
+        { kind: 'device-masked', ref: 'skill/a', agent: 'codex', message: '' },
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it('a converged run with only informational notes still exits 0', () => {
+    const result = buildPlan({
+      targets: [],
+      orphans: [],
+      diagnostics: [{ kind: 'placement-shared', ref: 'skill/a', agent: 'cursor', message: '' }],
+    });
+    expect(exitCodeFor(result)).toBe(0);
   });
 });

@@ -18,6 +18,10 @@
   pure TOML text-span splicer + jsonc-parser, verified against the owner's real configs.
 - ✅ M0 — first `capability-table.ts` with verified paths and `verifiedAgainst` versions.
 - ✅ **M0 complete.**
+- ✅ **M2 complete** — projects and the full ladder: `.agent-sync.yaml` marker with
+  auto-registration, resolver layers 3 and 1, project-scope deployment with minimum-copy placement
+  for Cursor's cross-agent discovery, and `link`/`unlink`/`include`/`exclude`/`route`/`disable`/
+  `enable`. The PRD scenario (project default cursor-only, one skill also on codex) is an e2e test.
 - ✅ **M1 complete** — skills end to end. Manifest schema + two-pass validation, the precedence
   resolver with provenance, drift classification, the pure planner, git-backed store, lockfile,
   atomic-write shell, and the CLI (`init`, `clone`, `apply`, `status`, `sync`, `add skill`,
@@ -26,15 +30,20 @@
 
 ## Next step (do this first)
 
-**Start M2 — projects and the full routing ladder** ([roadmap](08-roadmap.md)). Build order:
+**Start M3 — MCP servers** ([roadmap](08-roadmap.md)). The riskiest milestone; the surgical editing
+it depends on is already built and verified (`src/core/formats/toml-edit.ts`, ADR 0007). Build order:
 
-1. `.agent-sync.yaml` project marker + auto-registration; `link`/`unlink`; git-remote hint.
-2. Resolver layers 3 and 1 (project defaults, per-artifact-per-project) — the ladder is already
-   written to accept them; `applyLadder` takes the rule list, so this is mostly wiring plus tests.
-3. Project-scope skill deployment, including the Cursor overlap/minimum-copy strategy and the
-   honest "visible via .claude/skills — not excludable" reporting in `status`.
-4. `route`, `include`/`exclude`, `disable`/`enable` commands; `status --why` for project rules.
-5. e2e scenario 3 from the docs: project default cursor-only + one skill adding codex.
+1. Canonical MCP schema (`mcp/<id>.yaml`) + zod validation; secrets file and `${secret:}` /
+   `${env:}` indirection; `secret set` command (values via stdin, never argv).
+2. Pure translators: canonical → Claude JSON, Cursor JSON, Codex TOML, with round-trip property
+   tests and capability warnings for fields a dialect cannot express.
+3. Writers: `.mcp.json`, `~/.claude.json`, `~/.cursor/mcp.json` via jsonc-parser; `config.toml` via
+   the existing splicer. Back up before first edit; refuse to write an unparseable file.
+4. `add mcp` (flags, interactive, `--from <agent>`); wire mcp into `resolveTargets`.
+5. `import`: scan agent homes for existing skills and MCP servers and adopt them.
+
+Watch for: Claude's `enabledMcpjsonServers` approval arrays (docs/02 §5b) — decide explicitly
+whether agent-sync records approval, and say so in the docs.
 
 **Dogfooding is deliberately deferred to one acceptance phase before v1.0** — the owner wants to
 adopt the finished tool once, not migrate his real setup at each milestone. Do not stop and ask for

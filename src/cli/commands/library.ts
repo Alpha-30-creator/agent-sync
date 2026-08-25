@@ -54,6 +54,7 @@ const registerSkill = (
   context: Context,
   id: string,
   targets: readonly AgentId[] | undefined,
+  scope: 'global' | 'project' | undefined,
 ): Manifest => {
   const raw = parse(readTextFile(context.layout.manifest) ?? 'version: 1') as Manifest;
   return {
@@ -62,7 +63,12 @@ const registerSkill = (
       ...raw.artifacts,
       skill: {
         ...raw.artifacts?.skill,
-        [id]: targets === undefined ? {} : { targets: [...targets] },
+        [id]: {
+          ...(targets === undefined ? {} : { targets: [...targets] }),
+          // `project` means "only ever deployed where a project includes it" — no
+          // global copy in the agents' home directories.
+          ...(scope === 'project' ? { scope: 'project' as const } : {}),
+        },
       },
     },
   };
@@ -77,6 +83,7 @@ export interface AddSkillOptions {
   readonly path: string;
   readonly id?: string;
   readonly targets?: readonly string[];
+  readonly scope?: 'global' | 'project';
   readonly storeOverride?: string;
   readonly json: boolean;
 }
@@ -102,7 +109,7 @@ export const runAddSkill = (options: AddSkillOptions): ExitCode => {
   }
 
   copyTree(source, skillDir(context.layout, id));
-  writeManifest(context, registerSkill(context, id, validTargets(options.targets)));
+  writeManifest(context, registerSkill(context, id, validTargets(options.targets), options.scope));
 
   if (options.json) {
     emitJson('add', true, { ref: `skill/${id}`, store: skillDir(context.layout, id) });
@@ -117,6 +124,7 @@ export interface NewSkillOptions {
   readonly id: string;
   readonly description?: string;
   readonly targets?: readonly string[];
+  readonly scope?: 'global' | 'project';
   readonly storeOverride?: string;
   readonly json: boolean;
 }
@@ -142,7 +150,10 @@ export const runNewSkill = (options: NewSkillOptions): ExitCode => {
     file,
     skillTemplate(options.id, options.description ?? 'Describe when this skill applies.'),
   );
-  writeManifest(context, registerSkill(context, options.id, validTargets(options.targets)));
+  writeManifest(
+    context,
+    registerSkill(context, options.id, validTargets(options.targets), options.scope),
+  );
 
   if (options.json) {
     emitJson('new', true, { ref: `skill/${options.id}`, path: file, directory });

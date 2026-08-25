@@ -14,7 +14,7 @@ import {
   type Observation,
 } from '../drift/classify.js';
 import type { AgentId, ArtifactType } from '../model/types.js';
-import type { Deployment, Diagnostic } from '../resolver/resolve.js';
+import { type Deployment, type Diagnostic, warnings } from '../resolver/resolve.js';
 
 /** One deployment target, with everything needed to decide and to act. */
 export interface TargetState {
@@ -22,7 +22,18 @@ export interface TargetState {
   /** Absolute path the artifact deploys to on this machine. */
   readonly path: string;
   readonly observation: Observation;
+  /**
+   * Every agent this single write serves. Usually just the deployment's own agent, but
+   * one copy in a project can satisfy several agents that read the same directory
+   * (docs/04-sync-model.md §7) — reporting must credit all of them, not only the one
+   * whose directory was chosen.
+   */
+  readonly covers?: readonly AgentId[];
 }
+
+/** Agents a target actually serves. */
+export const coveredAgents = (target: TargetState): readonly AgentId[] =>
+  target.covers ?? [target.deployment.agent];
 
 export type Operation =
   | {
@@ -152,11 +163,14 @@ export const requiresDecision = (plan: Plan): boolean =>
  * run rather than the plan: a question answered by `--adopt` or `--overwrite` is no
  * longer outstanding, so it must not leave the process reporting "needs a decision".
  */
-export const exitCodeFrom = (unresolved: number, diagnostics: number): 0 | 2 | 3 => {
+export const exitCodeFrom = (unresolved: number, warningCount: number): 0 | 2 | 3 => {
   if (unresolved > 0) return 3;
-  return diagnostics > 0 ? 2 : 0;
+  return warningCount > 0 ? 2 : 0;
 };
 
 /** Exit code for a plan nobody has answered yet — status and dry runs. */
 export const exitCodeFor = (plan: Plan): 0 | 2 | 3 =>
-  exitCodeFrom(plan.operations.filter((o) => o.kind === 'ask').length, plan.diagnostics.length);
+  exitCodeFrom(
+    plan.operations.filter((o) => o.kind === 'ask').length,
+    warnings(plan.diagnostics).length,
+  );
