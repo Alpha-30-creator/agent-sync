@@ -136,6 +136,29 @@ contents), so its output is safe to paste into an issue.
 | `~/.agents/skills` does not exist here, though it does on macOS | The shared-convention directory is created by third-party tooling, not by the agents. Support it opportunistically (Q10); never assume it |
 | Agent versions differ across the owner's own two machines (Claude 2.1.153 vs 2.1.245, codex 0.134.0 vs 0.149.1, cursor-agent May vs Aug) | `verifiedAgainst` in the capability table must be a *range or list*, not a single version, and `doctor` should flag an installed version outside the verified set rather than assuming the layout holds |
 
+## 5b. MCP write targets — confirmed by positive test
+
+Adding a throwaway server through each agent's own CLI and diffing the result (macOS,
+2026-08-25). All test servers were removed and the configs restored afterwards.
+
+| Agent / scope | Command | File written | Shape |
+|---|---|---|---|
+| Claude — user | `claude mcp add --scope user` | `~/.claude.json` | top-level `mcpServers` key, **created on demand** (its absence means "no servers", not "wrong file") |
+| Claude — project | `claude mcp add --scope project` | `<project>/.mcp.json` | `mcpServers`, dedicated shareable file |
+| Claude — local (the CLI default) | `claude mcp add --scope local` | `~/.claude.json` | `projects["<abs path>"].mcpServers` — per-machine, private |
+| Codex — global | `codex mcp add` | `~/.codex/config.toml` | `[mcp_servers.<name>]` plus a separate `[mcp_servers.<name>.env]` table |
+| Cursor | (no CLI) | `~/.cursor/mcp.json` | `mcpServers`, dedicated file |
+
+Two consequences beyond the paths:
+
+- **Claude gates project servers behind approval.** The project entry in `~/.claude.json` carries
+  `enabledMcpjsonServers` / `disabledMcpjsonServers` arrays. Writing `.mcp.json` alone leaves a
+  server pending approval, so the adapter must decide — and be explicit — about whether it also
+  records approval on the user's behalf.
+- **Codex's own CLI is destructive.** See [ADR 0007](decisions/0007-surgical-config-editing.md):
+  `codex mcp add` rewrote unrelated parts of `config.toml`, and removing the server did not undo it.
+  agent-sync splices text spans and leaves everything else byte-identical.
+
 ## 6. Sources
 
 - [Cursor Docs — Agent Skills](https://cursor.com/docs/skills)

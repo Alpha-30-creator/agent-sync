@@ -40,8 +40,8 @@ Chosen for the unusual hard requirement: **editing user-owned config files witho
 | CLI framework | **commander** | Boring, ubiquitous, sufficient. (clipanion/oclif add structure we don't need.) |
 | Schema validation | **zod** (v4) | Manifest/lockfile/device-file parsing with precise, human-mappable errors; types inferred from schemas so there's one source of truth |
 | YAML | **yaml** (`eemeli/yaml`) | Full document model — preserves comments and formatting when we rewrite `agent-sync.yaml` after CLI edits |
-| TOML (Codex config) | **@ltd/j-toml** or **smol-toml** + custom surgical editor | Requirement: round-trip edit of `[mcp_servers.*]` tables preserving the rest of the file. Evaluate both against real Codex configs in week 1; if neither round-trips comments acceptably, fall back to targeted text-span editing driven by the parser's position info. This is a known risk (PRD risk #3) with a spike scheduled ([Roadmap M0](08-roadmap.md)). |
-| JSON with comments/format | **jsonc-parser** (VS Code's) | `modify()`/`applyEdits` do exactly our surgical-edit pattern for `~/.claude.json` and `mcp.json` files |
+| TOML (Codex config) | **smol-toml** for reading/verification + **our own text-span splicer** for writing | Spike complete ([ADR 0007](decisions/0007-surgical-config-editing.md)): `@ltd/j-toml` mangled 135 lines of a real config and was rejected; `smol-toml` round-trips almost cleanly (2 cosmetic lines) and preserves integer types, so it reads and verifies, but writes go through `src/core/formats/toml-edit.ts`, which never re-serializes the document. |
+| JSON with comments/format | **jsonc-parser** (VS Code's) | Verified on a real 53 KB `~/.claude.json`: `modify()`/`applyEdits` confine changes to the managed key path and preserve comments. Caveat recorded in ADR 0007 — it may reflow formatting inside the object it edits. |
 | Hashing | node `crypto` (SHA-256) | No dependency needed |
 | Prompts | **@clack/prompts** | Pleasant interactive confirms; degrades to flags in non-TTY |
 | Terminal output | **picocolors** + hand-rolled matrix rendering | Tiny; avoids heavyweight UI deps |

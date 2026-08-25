@@ -1,0 +1,41 @@
+# Codex configuration — hand written, with comments the editor must preserve.
+model = "gpt-5.6-sol"
+model_reasoning_effort = "low"
+notify = ["/Applications/Example.app/Contents/MacOS/Notifier", "turn-ended"]
+service_tier = "priority"
+
+[features]
+web_search = true
+
+[marketplaces.example-bundled]
+last_updated = "2026-08-22T06:54:40Z"
+source_type = "local"
+source = "/opt/example/marketplaces/bundled"
+
+[plugins."browser@example-bundled"]
+enabled = true
+
+[plugins."pdf@example-runtime"]
+enabled = true
+
+# The MCP servers below are managed by hand; agent-sync must not disturb them.
+[mcp_servers.node_repl]
+command = "node"
+args = ["mcp"]
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+EXAMPLE_HOME = "/opt/example"
+EXAMPLE_TIMEOUT_MS = "1000"
+
+[mcp_servers.computer-use]
+command = "example-computer-use"
+
+[projects."/home/user/dev/example-app"]
+trust_level = "trusted"
+
+[windows]
+shell = "powershell"
+
+[shell_environment_policy.set]
+EXAMPLE_FLAG = "1"

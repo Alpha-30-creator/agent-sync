@@ -13,20 +13,36 @@
 - ✅ First core modules: `Result`, `suggest`, domain types, id/ref parsing (42 tests green).
 - ✅ M0 probe tooling (`scripts/probe.mjs`) + **macOS verification done** — findings in `docs/02-agent-landscape.md §5a`.
 - ✅ M0 — **Windows verification done**: same `%USERPROFILE%` dot-dir layout as macOS (Q6 resolved).
-- ⬜ M0 — positive MCP location tests (add a dummy server per agent, re-probe).
-- ⬜ M0 spike 2 — surgical TOML/JSON edit fidelity against real config files.
-- ⬜ M1 — skills end to end (global scope, 3 agents, 2 devices).
+- ✅ M0 — positive MCP write-target tests done for all Claude scopes + Codex ([landscape §5b](02-agent-landscape.md)).
+- ✅ M0 spike 2 — surgical edit strategy settled and implemented ([ADR 0007](decisions/0007-surgical-config-editing.md)):
+  pure TOML text-span splicer + jsonc-parser, verified against the owner's real configs.
+- ✅ M0 — first `capability-table.ts` with verified paths and `verifiedAgainst` versions.
+- ⬜ **M0 is complete. Next: M1** — skills end to end (global scope, 3 agents, 2 devices).
 
 ## Next step (do this first)
 
-Finish M0: (1) positive MCP location tests — add a throwaway MCP server through each agent's own
-CLI, re-run the probe, and record which file actually changed; (2) the TOML/JSON surgical-edit
-spike against the real `~/.codex/config.toml` (4 KB, holds Codex's entire state) and
-`~/.claude.json` (52 KB of mixed state); (3) encode everything as
-`src/adapters/capability-table.ts` with `verifiedAgainst` versions. Windows probe is owner-blocked
-and can land in parallel.
+**M0 is done.** Start M1 — the narrowest full slice: global-scope skills, all three agents, two
+devices. Build order:
+
+1. `src/core/model/` manifest + lockfile types and zod schemas; strict validation with located errors.
+2. `src/core/resolver/` layers 4→2 (no projects yet) with provenance.
+3. `src/core/drift/` + `src/core/planner/` — the seven-row drift table from architecture §6.
+4. `src/store/` git wrapper + store layout; `src/shell/fs.ts` atomic writes and hashing.
+5. Skill writers for the three agents (global scope) driven by `capability-table.ts`.
+6. Commands: `init`, `clone`, `apply`, `status`, `sync`, `add skill`, `new`, `save`, `rm`, `doctor`.
+
+Keep the agent-mode contract from the first command: non-TTY means non-interactive,
+`--json` with `schemaVersion`, exit codes 0/1/2/3.
 
 ## Surprises worth remembering
+
+- **Codex's own `codex mcp add` corrupts unrelated config** (drops keys, reorders env tables,
+  turns `120` into `120.0`) and removing the server does not undo it. agent-sync's splicer is
+  byte-exact — a genuine differentiator worth saying out loud in the README.
+- **Claude's `mcpServers` key in `~/.claude.json` is created on demand**; its absence means "no
+  servers configured", never "wrong file". Its CLI defaults to `local` scope, which writes
+  `projects["<abs path>"].mcpServers`, not the top-level key.
+- Claude gates `.mcp.json` servers behind `enabledMcpjsonServers` approval arrays.
 
 - **Codex has a plugin system** (`[plugins."id@mkt"]` + `[marketplaces.*]` in `config.toml`) —
   the design docs originally said it didn't. `plugin` is a two-agent artifact type (Q9).
