@@ -147,8 +147,16 @@ export const isConverged = (plan: Plan): boolean => plan.operations.length === 0
 export const requiresDecision = (plan: Plan): boolean =>
   plan.operations.some((operation) => operation.kind === 'ask');
 
-/** Exit code contract from docs/06-cli-spec.md §1. */
-export const exitCodeFor = (plan: Plan): 0 | 2 | 3 => {
-  if (requiresDecision(plan)) return 3;
-  return plan.diagnostics.length > 0 ? 2 : 0;
+/**
+ * Exit code contract from docs/06-cli-spec.md §1, expressed over the *outcome* of a
+ * run rather than the plan: a question answered by `--adopt` or `--overwrite` is no
+ * longer outstanding, so it must not leave the process reporting "needs a decision".
+ */
+export const exitCodeFrom = (unresolved: number, diagnostics: number): 0 | 2 | 3 => {
+  if (unresolved > 0) return 3;
+  return diagnostics > 0 ? 2 : 0;
 };
+
+/** Exit code for a plan nobody has answered yet — status and dry runs. */
+export const exitCodeFor = (plan: Plan): 0 | 2 | 3 =>
+  exitCodeFrom(plan.operations.filter((o) => o.kind === 'ask').length, plan.diagnostics.length);

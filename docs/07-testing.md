@@ -72,11 +72,20 @@ GitHub Actions, per PR:
   test:      {ubuntu-latest, macos-latest, windows-latest} × {node 22, 24} (+ node 20 runtime-compat job)
              → typecheck, lint, dependency-direction check (dependency-cruiser),
                unit + property + integration + e2e, coverage upload
-  gates:     core branch coverage ≥ 100%*, overall line coverage ≥ 90%
+  gates:     core branch coverage = 100%*
              no `src/core` → shell imports; no new runtime deps without docs/05 update
 ```
 
-\* 100% is realistic *because* the core is pure and plain-data; the threshold is the point — it keeps effectful code from sneaking into `core/` (untestable branches show up as coverage failures).
+\* 100% is realistic *because* the core is pure and plain-data; the threshold is the point — it
+keeps effectful code from sneaking into `core/`, since untestable branches show up as coverage
+failures. In practice it has already paid for itself: reaching it forced unreachable defensive
+fallbacks out of the reference parser and turned provenance into a union type that cannot be
+half-populated.
+
+There is deliberately **no global coverage threshold**. The e2e suite drives the built CLI as a
+subprocess, so the shell code it exercises hardest is not instrumented, and a global number would
+mostly measure that artefact rather than real risk. The shell's safety properties are asserted
+directly instead — atomic writes, backups, byte-exact config edits, and the golden CLI scenarios.
 
 Windows runs are not optional or allow-fail. Most real-world breakage will be Windows paths/attributes; the author can hand-test Windows but Linux only via CI — which is exactly what the matrix covers.
 

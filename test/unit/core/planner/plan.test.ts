@@ -185,3 +185,14 @@ describe('convergence (property)', () => {
     );
   });
 });
+
+describe('exitCodeFrom', () => {
+  it('reports a needed decision only while one is outstanding', async () => {
+    const { exitCodeFrom } = await import('../../../../src/core/planner/plan.js');
+    expect(exitCodeFrom(0, 0)).toBe(0);
+    expect(exitCodeFrom(0, 3)).toBe(2);
+    expect(exitCodeFrom(1, 0)).toBe(3);
+    // A question answered by --adopt is settled, even though the plan still lists it.
+    expect(exitCodeFrom(0, 1)).toBe(2);
+  });
+});
