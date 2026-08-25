@@ -20,7 +20,6 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const CLI = fileURLToPath(new URL('../../dist/cli/index.js', import.meta.url));
-const REPO = fileURLToPath(new URL('../..', import.meta.url));
 
 let workspace: string;
 let deviceOne: string;
@@ -73,11 +72,6 @@ const fabricateAgents = (home: string): void => {
 };
 
 beforeAll(() => {
-  // The suite drives the built CLI, so make sure dist matches the sources.
-  execFileSync('node', ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
-    cwd: REPO,
-  });
-
   workspace = join(tmpdir(), `agent-sync-e2e-${process.pid}-${Date.now()}`);
   deviceOne = join(workspace, 'device-one');
   deviceTwo = join(workspace, 'device-two');

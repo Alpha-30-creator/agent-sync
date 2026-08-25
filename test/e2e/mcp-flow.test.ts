@@ -14,7 +14,6 @@ import { parse as parseJsonc } from 'jsonc-parser';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const CLI = fileURLToPath(new URL('../../dist/cli/index.js', import.meta.url));
-const REPO = fileURLToPath(new URL('../..', import.meta.url));
 const CODEX_FIXTURE = readFileSync(
   new URL('../fixtures/codex-config.toml', import.meta.url),
   'utf8',
@@ -78,10 +77,6 @@ const storeContains = (needle: string): boolean => {
 };
 
 beforeAll(() => {
-  execFileSync('node', ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
-    cwd: REPO,
-  });
-
   workspace = join(tmpdir(), `agent-sync-mcp-e2e-${process.pid}-${Date.now()}`);
   home = join(workspace, 'home');
   for (const dir of ['.claude', '.codex', '.cursor'])
