@@ -10,7 +10,7 @@
 
 - **Skill** — a directory containing a `SKILL.md` file (YAML frontmatter: `name`, `description`; markdown body: instructions) plus optional supporting files/scripts. Originated with Claude Code; now a de-facto cross-agent standard adopted by both Codex and Cursor. **This is the best news for this project: the artifact format is already portable. Only discovery locations differ.**
 - **MCP server definition** — how to launch/connect to a Model Context Protocol server: a command + args + env (stdio) or a URL + headers (HTTP/SSE). Conceptually identical across agents; syntactically different everywhere.
-- **Plugin** — a Claude Code bundle (skills, slash commands, hooks, MCP servers, agents) installed from a "marketplace" (a git repo with a manifest). No Codex or Cursor equivalent exists.
+- **Plugin** — a bundle (skills, slash commands, hooks, MCP servers, agents) installed from a "marketplace". Claude Code and **Codex** both have one (verified on a real machine, 2026-08-25); the two use different manifests and storage, so plugins are portable in *concept* but not as files. Cursor has no equivalent (open feature request).
 
 ## 2. Claude Code
 
@@ -45,9 +45,9 @@
 
 | Concern | Global (user) scope | Project scope |
 |---------|--------------------|---------------|
-| Skills | `~/.codex/skills/<name>/SKILL.md` | `<project>/.codex/skills/<name>/SKILL.md` |
-| MCP | `~/.codex/config.toml` under `[mcp_servers.<name>]` tables | `<project>/.codex/config.toml` (trusted projects only) **[verify]** |
-| Plugins | ❌ No plugin system | — |
+| Skills | `~/.codex/skills/<name>/SKILL.md` ✔ verified | `<project>/.codex/skills/<name>/SKILL.md` |
+| MCP | `~/.codex/config.toml` under `[mcp_servers.<name>]` tables ✔ verified | `<project>/.codex/config.toml` (trusted projects only) **[verify]** |
+| Plugins | ✔ **Codex has plugins** — `[plugins."<id>@<marketplace>"] enabled = true` plus `[marketplaces.<name>]` (`source_type`, `source`, `last_updated`) in `config.toml` | **[verify]** |
 
 **MCP TOML shape (Codex):**
 
@@ -72,7 +72,7 @@ url = "https://mcp.linear.app/mcp"
 
 | Concern | Global (user) scope | Project scope |
 |---------|--------------------|---------------|
-| Skills | `~/.cursor/skills/<name>/SKILL.md` **[verify]** | `<project>/.cursor/skills/` — and Cursor *also* reads `.agents/skills/`, `.claude/skills/`, `.codex/skills/` |
+| Skills | `~/.cursor/skills/<name>/SKILL.md` ✔ verified | `<project>/.cursor/skills/` — and Cursor *also* reads `.agents/skills/`, `.claude/skills/`, `.codex/skills/` |
 | MCP | `~/.cursor/mcp.json` — key: `mcpServers` | `<project>/.cursor/mcp.json` |
 | Plugins | ❌ No plugin system (open feature request) | — |
 | Rules (context) | — | `.cursor/rules/*.mdc`, `AGENTS.md` (not an artifact type in v1) |
@@ -88,13 +88,13 @@ url = "https://mcp.linear.app/mcp"
 | Capability | Claude Code | Codex | Cursor |
 |---|---|---|---|
 | `SKILL.md` skills — project scope | ✅ `.claude/skills` | ✅ `.codex/skills` | ✅ `.cursor/skills` (+ reads `.claude`/`.codex`/`.agents` skills) |
-| Skills — global scope | ✅ `~/.claude/skills` | ✅ `~/.codex/skills` | ✅ **[verify path]** |
+| Skills — global scope | ✅ `~/.claude/skills` | ✅ `~/.codex/skills` | ✅ `~/.cursor/skills` (verified) |
 | MCP — project scope | ✅ `.mcp.json` (JSON) | ✅ `.codex/config.toml` (TOML) **[verify]** | ✅ `.cursor/mcp.json` (JSON) |
 | MCP — global scope | ✅ `~/.claude.json` (JSON, shared file) | ✅ `~/.codex/config.toml` (TOML, shared file) | ✅ `~/.cursor/mcp.json` (JSON, dedicated file) |
 | MCP stdio servers | ✅ | ✅ | ✅ |
 | MCP remote servers | ✅ http/sse | ✅ streamable http | ✅ http/sse |
 | Per-server enable/disable | ✅ (via config) | ✅ `enabled = false` | ✅ (UI toggle; config presence) |
-| Plugins | ✅ marketplaces + `enabledPlugins` | ❌ | ❌ |
+| Plugins | ✅ marketplaces + `enabledPlugins` (JSON) | ✅ `[plugins."id@mkt"]` + `[marketplaces.*]` (TOML) | ❌ |
 | CLI for scripted management | ✅ `claude mcp ...`, `claude plugin ...` | ✅ `codex mcp ...` | ⚠️ partial |
 
 **Consequences for the design:**
@@ -103,6 +103,25 @@ url = "https://mcp.linear.app/mcp"
 2. **MCP needs a canonical schema + three serializers** → see [Architecture §7](03-architecture.md). The canonical schema is a superset; when a field doesn't map to a target agent (e.g. Cursor's `envFile` has no Codex equivalent), apply emits a capability warning instead of failing or silently dropping.
 3. **Plugins are a cross-device story only** → the plugin artifact type routes exclusively to Claude Code; the routing engine treats agent support as a constraint, and `status` shows plugins as `n/a` (not "missing") for Codex/Cursor.
 4. **Two shared-file formats must be edited surgically** (`~/.claude.json`, `config.toml`); two are dedicated-file formats we can own more confidently (`.mcp.json`, `mcp.json`) but still merge rather than replace.
+
+## 5a. Verified findings (M0 probe)
+
+Run `node scripts/probe.mjs` on any machine; it reports layout and file *shape* only (never
+contents), so its output is safe to paste into an issue.
+
+**macOS, 2026-08-25** — Claude Code, Codex, Cursor all installed:
+
+| Finding | Consequence |
+|---|---|
+| `~/.cursor/skills` exists | Resolves open question Q1: Cursor has a global skills dir; no per-project degradation needed |
+| `~/.codex/skills`, `~/.claude/skills` exist as expected | Skill placement confirmed for all three agents |
+| **Codex has a plugin system** (`[plugins."x@mkt"]`, `[marketplaces.*]` in `config.toml`) | Contradicts earlier research. `plugin` is a two-agent artifact type — see open question Q9 |
+| Codex `config.toml` also holds `[projects."<abs path>"]` (with `trust_level`), `[features]`, `[desktop.*]`, model settings | Confirms the surgical-edit requirement: this one file is Codex's entire state, including absolute paths that must never be synced |
+| `~/.claude.json` is ~52 KB of mixed state (9 project entries, onboarding/telemetry caches) with **no** `mcpServers` key on this machine | Confirms the highest-risk write target. Where Claude puts *global* MCP servers still needs a positive test — add one via `claude mcp add` and re-probe |
+| `~/.codex/skills/<name>` and `~/.cursor/skills/<name>` are **symlinks** into `~/.agents/skills/` (created by another skills tool) | Two consequences: (a) `import`/drift logic must recognize symlinked entries as *unmanaged* and never clobber them; (b) `~/.agents/skills` is an emerging shared convention worth supporting as a placement target |
+| Codex `config.toml` currently has no comments | Slightly lowers TOML round-trip risk for this user, but the requirement stands for everyone else |
+
+**Windows** — pending; run the same probe and record results here.
 
 ## 6. Sources
 

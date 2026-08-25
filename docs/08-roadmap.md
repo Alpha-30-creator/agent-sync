@@ -8,7 +8,11 @@ Milestones sized for a single maintainer with dogfooding as the forcing function
 
 De-risk the two things the whole design leans on, before writing product code.
 
-- [ ] **Landscape re-verification:** on both real machines (Mac + Windows), confirm every path/format in [Agent Landscape](02-agent-landscape.md) against currently installed versions of Claude Code, Codex, Cursor. Resolve every **[verify]** marker (Cursor global skills dir; Codex project-scope `config.toml`; Claude non-interactive plugin install). Record results as the first `capability-table.ts` with `verifiedAgainst` versions.
+- [x] **Probe tooling:** `scripts/probe.mjs` reports layout + file shape (never contents) on any OS.
+- [x] **Landscape verification — macOS:** all three agents probed; Cursor global skills dir confirmed (Q1 resolved); **Codex plugin system discovered** (Q9 raised); symlinked third-party skills found in the wild (Q10 raised). Recorded in [Agent Landscape §5a](02-agent-landscape.md).
+- [ ] **Landscape verification — Windows:** owner runs `node scripts/probe.mjs --json` on the Windows machine; record results and resolve Q6.
+- [ ] **Positive MCP tests:** add a throwaway server via each agent's own CLI/UI, re-probe, and confirm exactly which file each agent writes (the Mac has no Claude MCP servers configured, so its location is still unconfirmed).
+- [ ] Encode all of the above as the first `capability-table.ts` with `verifiedAgainst` versions.
 - [ ] **TOML surgical-edit spike:** take the author's real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
 - [ ] Scaffold: repo, pnpm, TS strict, Biome, Vitest, dependency-cruiser rule, 3-OS CI running one trivial test.
 
@@ -80,4 +84,6 @@ The narrowest full slice: **global-scope skills, all three agents, two devices.*
 | Q5 | Manifest ergonomics: is the YAML nesting depth acceptable in practice, or does v1.1 need a flatter rule syntax? | dogfood | Decide from real usage, not speculation |
 | Q6 | Windows: any agent storing per-user config under `%APPDATA%` rather than `%USERPROFILE%` dot-dirs? | M0 | Verify on the real Windows machine; encode in locators |
 | Q7 | Cursor hooks: are the v1.7+ hook events stable/rich enough for the heartbeat, or is Cursor tier-0-only at launch? | M4 | Verify during M4; Claude Code hooks are the reference implementation either way |
+| Q9 | Codex plugins: how do `[plugins."id@mkt"]` + `[marketplaces.*]` behave (install path, non-interactive enable, marketplace `source_type` values)? Can one plugin declaration target both Claude and Codex, or do they need per-agent sources? | M4 | Model `plugin` as a two-agent type with per-agent source fields; verify before building the adapter |
+| Q10 | Should `~/.agents/skills` (shared convention seen in the wild, read by Cursor) be a first-class placement target that satisfies several agents at once? | M2 | Probably yes for project scope — it is exactly the minimum-copy strategy; verify which agents read it |
 | Q8 | Skill-pack activation quality: do the three intent-split skills (`agent-sync-create-skill`, `agent-sync-add-mcp`, `agent-sync`) trigger reliably in all three agents — especially the two interceptors, which must beat the agent's native instinct? | dogfood (M2) | Three intent-based skills ([Agent-Native §4](09-agent-native.md)); tune descriptions on observed misses, merge only if redundant |

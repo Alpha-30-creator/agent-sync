@@ -11,16 +11,28 @@
 - ✅ Full design doc set written and reviewed (`docs/01`–`09`), name settled as `agent-sync`.
 - ✅ Repo scaffolding: TS/ESM, pnpm, vitest, biome, dependency-cruiser, 3-OS CI matrix (20/22/24).
 - ✅ First core modules: `Result`, `suggest`, domain types, id/ref parsing (42 tests green).
-- ⬜ M0 spike 1 — landscape re-verification on real machines (Mac done? / Windows pending).
+- ✅ M0 probe tooling (`scripts/probe.mjs`) + **macOS verification done** — findings in `docs/02-agent-landscape.md §5a`.
+- ⬜ M0 — **Windows verification pending (owner)**: `node scripts/probe.mjs --json` on the Windows machine.
+- ⬜ M0 — positive MCP location tests (add a dummy server per agent, re-probe).
 - ⬜ M0 spike 2 — surgical TOML/JSON edit fidelity against real config files.
 - ⬜ M1 — skills end to end (global scope, 3 agents, 2 devices).
 
 ## Next step (do this first)
 
-Run the M0 verification: probe this Mac's actual agent layouts, then have the owner run
-`scripts/probe.mjs` on the Windows machine and paste the JSON back. Record findings in
-`docs/02-agent-landscape.md` (resolve every **[verify]** marker) and encode them as the first
-`src/adapters/capability-table.ts` with `verifiedAgainst` versions.
+Finish M0: (1) positive MCP location tests — add a throwaway MCP server through each agent's own
+CLI, re-run the probe, and record which file actually changed; (2) the TOML/JSON surgical-edit
+spike against the real `~/.codex/config.toml` (4 KB, holds Codex's entire state) and
+`~/.claude.json` (52 KB of mixed state); (3) encode everything as
+`src/adapters/capability-table.ts` with `verifiedAgainst` versions. Windows probe is owner-blocked
+and can land in parallel.
+
+## Surprises worth remembering
+
+- **Codex has a plugin system** (`[plugins."id@mkt"]` + `[marketplaces.*]` in `config.toml`) —
+  the design docs originally said it didn't. `plugin` is a two-agent artifact type (Q9).
+- Third-party tooling already **symlinks** skills from `~/.agents/skills` into `~/.codex/skills`
+  and `~/.cursor/skills` on this machine. Import and drift logic must treat those as unmanaged
+  and never clobber them (Q10).
 
 ## Environment facts (this dev machine)
 
