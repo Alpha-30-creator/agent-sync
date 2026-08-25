@@ -17,22 +17,26 @@
 - ✅ M0 spike 2 — surgical edit strategy settled and implemented ([ADR 0007](decisions/0007-surgical-config-editing.md)):
   pure TOML text-span splicer + jsonc-parser, verified against the owner's real configs.
 - ✅ M0 — first `capability-table.ts` with verified paths and `verifiedAgainst` versions.
-- ⬜ **M0 is complete. Next: M1** — skills end to end (global scope, 3 agents, 2 devices).
+- ✅ **M0 complete.**
+- ✅ **M1 complete** — skills end to end. Manifest schema + two-pass validation, the precedence
+  resolver with provenance, drift classification, the pure planner, git-backed store, lockfile,
+  atomic-write shell, and the CLI (`init`, `clone`, `apply`, `status`, `sync`, `add skill`,
+  `new skill`, `save`, `rm`, `doctor`). 215 tests including 20 end-to-end scenarios; CI green on
+  3 OSes.
 
 ## Next step (do this first)
 
-**M0 is done.** Start M1 — the narrowest full slice: global-scope skills, all three agents, two
-devices. Build order:
+**Start M2 — projects and the full routing ladder** ([roadmap](08-roadmap.md)). Build order:
 
-1. `src/core/model/` manifest + lockfile types and zod schemas; strict validation with located errors.
-2. `src/core/resolver/` layers 4→2 (no projects yet) with provenance.
-3. `src/core/drift/` + `src/core/planner/` — the seven-row drift table from architecture §6.
-4. `src/store/` git wrapper + store layout; `src/shell/fs.ts` atomic writes and hashing.
-5. Skill writers for the three agents (global scope) driven by `capability-table.ts`.
-6. Commands: `init`, `clone`, `apply`, `status`, `sync`, `add skill`, `new`, `save`, `rm`, `doctor`.
+1. `.agent-sync.yaml` project marker + auto-registration; `link`/`unlink`; git-remote hint.
+2. Resolver layers 3 and 1 (project defaults, per-artifact-per-project) — the ladder is already
+   written to accept them; `applyLadder` takes the rule list, so this is mostly wiring plus tests.
+3. Project-scope skill deployment, including the Cursor overlap/minimum-copy strategy and the
+   honest "visible via .claude/skills — not excludable" reporting in `status`.
+4. `route`, `include`/`exclude`, `disable`/`enable` commands; `status --why` for project rules.
+5. e2e scenario 3 from the docs: project default cursor-only + one skill adding codex.
 
-Keep the agent-mode contract from the first command: non-TTY means non-interactive,
-`--json` with `schemaVersion`, exit codes 0/1/2/3.
+Then dogfood: put the owner's real skills under agent-sync on both machines before starting M3.
 
 ## Surprises worth remembering
 
