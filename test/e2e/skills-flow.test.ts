@@ -58,6 +58,20 @@ const run = (home: string, args: readonly string[]): RunResult => {
 const skillPath = (home: string, agentDir: string, id: string): string =>
   join(home, agentDir, 'skills', id, 'SKILL.md');
 
+/**
+ * Give a fabricated home the footprint of all three agents.
+ *
+ * Without this the suite silently depends on what happens to be installed on the host:
+ * it passed on a developer machine with every agent on PATH and deployed nothing on a
+ * bare CI runner. Agent detection keys on the CLI *or* the agent's home directory, so
+ * creating the directories makes these tests deterministic everywhere.
+ */
+const fabricateAgents = (home: string): void => {
+  for (const dir of ['.claude', '.codex', '.cursor']) {
+    mkdirSync(join(home, dir), { recursive: true });
+  }
+};
+
 beforeAll(() => {
   // The suite drives the built CLI, so make sure dist matches the sources.
   execFileSync('node', ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
@@ -70,6 +84,8 @@ beforeAll(() => {
   remote = join(workspace, 'remote.git');
   mkdirSync(deviceOne, { recursive: true });
   mkdirSync(deviceTwo, { recursive: true });
+  fabricateAgents(deviceOne);
+  fabricateAgents(deviceTwo);
   execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
 });
 
@@ -243,6 +259,7 @@ describe('agent-mode contract', () => {
   it('reports a missing store as an error rather than hanging on a prompt', () => {
     const empty = join(workspace, 'no-store');
     mkdirSync(empty, { recursive: true });
+    fabricateAgents(empty);
     const result = run(empty, ['--json', 'status']);
     expect(result.code).toBe(1);
     const parsed = JSON.parse(result.stdout) as { ok: boolean; error: string };
