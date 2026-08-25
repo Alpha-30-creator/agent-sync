@@ -36,7 +36,14 @@
 4. `route`, `include`/`exclude`, `disable`/`enable` commands; `status --why` for project rules.
 5. e2e scenario 3 from the docs: project default cursor-only + one skill adding codex.
 
-Then dogfood: put the owner's real skills under agent-sync on both machines before starting M3.
+**Dogfooding is deliberately deferred to one acceptance phase before v1.0** — the owner wants to
+adopt the finished tool once, not migrate his real setup at each milestone. Do not stop and ask for
+per-milestone dogfooding.
+
+Because that removes the usual early-feedback loop, compensate: build fixtures from the *real*
+config shapes captured in `docs/02-agent-landscape.md` §5a/§5b, and keep the rehearsal path
+(`--store` + a sandbox `HOME`) working so the full tool can be exercised against a realistic
+machine without touching `~`.
 
 ## Surprises worth remembering
 

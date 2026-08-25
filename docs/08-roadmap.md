@@ -29,7 +29,8 @@ The narrowest full slice: **global-scope skills, all three agents, two devices.*
 - [ ] Agent-mode CLI contract from day one: non-TTY ⇒ non-interactive, `--json` + `schemaVersion`, exit codes; transactional `autoSync` ([Agent-Native §4.2, §5 tier 0](09-agent-native.md))
 - [ ] Test layers 1–2 for everything above; e2e scenarios 1, 2, 4
 
-**Exit:** the author's skills are managed by agent-sync on both machines. *Dogfood begins.*
+**Exit:** the full skills slice works end to end against sandbox homes on all three OSes.
+(Real-machine adoption is deliberately deferred — see the acceptance phase before M4.)
 
 ## M2 — Projects & full routing (v0.2) (≈ 2 weeks)
 
@@ -41,7 +42,8 @@ The narrowest full slice: **global-scope skills, all three agents, two devices.*
 - [ ] Property-test suite for the resolver invariants
 - [ ] e2e scenario 3 (the PRD scenario)
 
-**Exit:** the full precedence ladder works and is explainable; the original requirement §2 example is a passing test *and* the author's real acme-equivalent project runs on it.
+**Exit:** the full precedence ladder works and is explainable; the original requirement §2 example
+is a passing test, exercised against a sandbox project.
 
 ## M3 — MCP (v0.3) (≈ 2–3 weeks; the grind)
 
@@ -52,7 +54,19 @@ The narrowest full slice: **global-scope skills, all three agents, two devices.*
 - [ ] `import` for MCP + skills (the onboarding scan)
 - [ ] Skill pack: add-mcp reference incl. the secrets protocol (user runs `secret set` themselves)
 
-**Exit:** zero hand-edited MCP config on either of the author's machines.
+**Exit:** MCP round-trips through all three dialects against fixtures taken from the owner's real
+configs, with byte-exact surgical writes.
+
+## M3.5 — Acceptance: dogfood the whole tool (owner + Claude, together)
+
+Deliberately a single phase rather than per-milestone adoption: the owner adopts the finished tool
+once instead of migrating a real setup repeatedly.
+
+- [ ] Rehearsal first: run the complete flow against a sandbox `HOME` seeded from the real probe
+      output, on macOS and Windows. Nothing touches `~` until this is clean.
+- [ ] `import` the owner's existing skills and MCP servers on the Mac; review every adopted artifact.
+- [ ] `sync` to the Windows machine; confirm parity, then run both agents for real work for a week.
+- [ ] Log every friction point; fix ergonomics before v1.0 rather than after.
 
 ## M4 — Plugins + polish → public v1.0 (≈ 2 weeks)
 
