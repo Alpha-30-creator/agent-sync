@@ -9,12 +9,14 @@
  * Usage:  node scripts/probe.mjs            # human-readable
  *         node scripts/probe.mjs --json     # machine-readable
  */
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, statSync } from 'node:fs';
 import { homedir, platform, release } from 'node:os';
 import { join } from 'node:path';
 
 const HOME = homedir();
 const asJson = process.argv.includes('--json');
+const IS_WINDOWS = platform() === 'win32';
 
 const describe = (value) => {
   if (value === null) return 'null';
@@ -23,17 +25,47 @@ const describe = (value) => {
   return typeof value;
 };
 
+const safe = (fn) => {
+  try {
+    return fn();
+  } catch (error) {
+    return `<${String(error.code ?? error.message ?? error)}>`;
+  }
+};
+
+/** Version of an agent CLI, if it is on PATH. */
+const cliVersion = (bin) =>
+  safe(() =>
+    execFileSync(bin, ['--version'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 10_000,
+      shell: IS_WINDOWS,
+    }).trim().split('\n')[0],
+  );
+
 const look = (path) => {
   if (!existsSync(path)) return { path, exists: false };
+  const linkStat = lstatSync(path);
+  if (linkStat.isSymbolicLink()) {
+    return { path, exists: true, kind: 'symlink', target: safe(() => readlinkSync(path)) };
+  }
   const stat = statSync(path);
   if (stat.isDirectory()) {
     let entries = [];
     try {
-      entries = readdirSync(path, { withFileTypes: true }).map((e) => ({
-        name: e.name,
-        kind: e.isDirectory() ? 'dir' : 'file',
-        hasSkillMd: e.isDirectory() && existsSync(join(path, e.name, 'SKILL.md')),
-      }));
+      entries = readdirSync(path, { withFileTypes: true }).map((e) => {
+        const full = join(path, e.name);
+        const link = e.isSymbolicLink();
+        // Third-party tooling symlinks skills between agent dirs; agent-sync must
+        // recognise those as unmanaged rather than clobbering them.
+        return {
+          name: e.name,
+          kind: link ? 'symlink' : e.isDirectory() ? 'dir' : 'file',
+          ...(link ? { target: safe(() => readlinkSync(full)) } : {}),
+          hasSkillMd: existsSync(join(full, 'SKILL.md')),
+        };
+      });
     } catch (error) {
       return { path, exists: true, kind: 'dir', error: String(error.message ?? error) };
     }
@@ -85,9 +117,41 @@ const shapeOf = (path) => {
   }
 };
 
+const APPDATA = process.env.APPDATA ?? '';
+const LOCALAPPDATA = process.env.LOCALAPPDATA ?? '';
+
+/**
+ * Windows question (roadmap Q6): do any agents store per-user config under
+ * %APPDATA%/%LOCALAPPDATA% rather than %USERPROFILE% dot-directories?
+ */
+const windowsRoots = () => {
+  if (!IS_WINDOWS) return null;
+  const out = {};
+  for (const [label, base] of [['APPDATA', APPDATA], ['LOCALAPPDATA', LOCALAPPDATA]]) {
+    if (base === '') continue;
+    for (const name of ['Claude', 'claude', 'Claude Code', 'Codex', 'codex', 'Cursor', 'cursor', 'anthropic', 'OpenAI']) {
+      const candidate = join(base, name);
+      if (existsSync(candidate)) out[`${label}/${name}`] = look(candidate);
+    }
+  }
+  return out;
+};
+
 const report = {
-  probeVersion: 1,
-  system: { platform: platform(), release: release(), node: process.version, home: HOME },
+  probeVersion: 2,
+  system: {
+    platform: platform(),
+    release: release(),
+    node: process.version,
+    home: HOME,
+    ...(IS_WINDOWS ? { appData: APPDATA, localAppData: LOCALAPPDATA } : {}),
+  },
+  cliVersions: {
+    claude: cliVersion('claude'),
+    codex: cliVersion('codex'),
+    'cursor-agent': cliVersion('cursor-agent'),
+    git: cliVersion('git'),
+  },
   agents: {
     claude: {
       skillsGlobal: look(join(HOME, '.claude', 'skills')),
@@ -105,6 +169,9 @@ const report = {
       cursorDir: look(join(HOME, '.cursor')),
     },
   },
+  // Shared cross-agent convention used by third-party skill installers.
+  sharedAgentsDir: look(join(HOME, '.agents', 'skills')),
+  windowsRoots: windowsRoots(),
 };
 
 if (asJson) {
@@ -112,6 +179,11 @@ if (asJson) {
 } else {
   console.log(`agent-sync probe — ${report.system.platform} ${report.system.release}, node ${report.system.node}`);
   console.log('(structure only: no file contents, no secrets)\n');
+  console.log('agent CLIs:');
+  for (const [bin, version] of Object.entries(report.cliVersions)) {
+    console.log(`  ${bin.padEnd(14)} ${version}`);
+  }
+  console.log();
   for (const [agent, places] of Object.entries(report.agents)) {
     console.log(`${agent}:`);
     for (const [what, info] of Object.entries(places)) {
@@ -124,5 +196,11 @@ if (asJson) {
     }
     console.log();
   }
-  console.log('Full detail: node scripts/probe.mjs --json');
+  const shared = report.sharedAgentsDir;
+  console.log(`shared ~/.agents/skills: ${shared.exists ? `${shared.entryCount} entries` : 'missing'}`);
+  if (report.windowsRoots) {
+    const keys = Object.keys(report.windowsRoots);
+    console.log(`windows app-data dirs: ${keys.length > 0 ? keys.join(', ') : 'none found'}`);
+  }
+  console.log('\nFull detail: node scripts/probe.mjs --json');
 }

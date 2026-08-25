@@ -109,7 +109,8 @@ url = "https://mcp.linear.app/mcp"
 Run `node scripts/probe.mjs` on any machine; it reports layout and file *shape* only (never
 contents), so its output is safe to paste into an issue.
 
-**macOS, 2026-08-25** — Claude Code, Codex, Cursor all installed:
+**macOS, 2026-08-25** — verified against Claude Code `2.1.153`, `codex-cli 0.134.0`,
+`cursor-agent 2026.05.09` (these become the `verifiedAgainst` values in the capability table):
 
 | Finding | Consequence |
 |---|---|
