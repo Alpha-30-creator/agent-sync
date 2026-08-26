@@ -197,3 +197,105 @@ describe('unlinking', () => {
     expect(existsSync(projectSkill('.cursor', 'db-migrate'))).toBe(true);
   });
 });
+
+describe('a second machine recognises the project from its committed marker', () => {
+  let otherHome: string;
+  let checkout: string;
+
+  const runThere = (args: readonly string[], cwd: string) => {
+    try {
+      return {
+        code: 0,
+        stdout: execFileSync(process.execPath, [CLI, ...args], {
+          cwd,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            HOME: otherHome,
+            USERPROFILE: otherHome,
+            GIT_AUTHOR_NAME: 'test',
+            GIT_AUTHOR_EMAIL: 'test@example.com',
+            GIT_COMMITTER_NAME: 'test',
+            GIT_COMMITTER_EMAIL: 'test@example.com',
+            NO_COLOR: '1',
+          },
+        }),
+      };
+    } catch (error) {
+      const failed = error as { status?: number; stdout?: string; stderr?: string };
+      return { code: failed.status ?? 1, stdout: `${failed.stdout ?? ''}${failed.stderr ?? ''}` };
+    }
+  };
+
+  beforeAll(() => {
+    // Publish the library, and the project repo with its marker inside.
+    const bareLibrary = join(workspace, 'library.git');
+    const bareProject = join(workspace, 'acme.git');
+    execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bareLibrary]);
+    execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bareProject]);
+
+    const git = (args: readonly string[], cwd: string): void => {
+      execFileSync('git', [...args], {
+        cwd,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: 'test',
+          GIT_AUTHOR_EMAIL: 'test@example.com',
+          GIT_COMMITTER_NAME: 'test',
+          GIT_COMMITTER_EMAIL: 'test@example.com',
+        },
+      });
+    };
+
+    run(['link', 'acme-app']);
+    run(['include', 'skill/db-migrate']);
+    execFileSync(process.execPath, [CLI, 'save', '-m', 'library'], {
+      cwd: home,
+      env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
+    });
+    execFileSync('git', ['remote', 'add', 'origin', bareLibrary], {
+      cwd: join(home, '.agent-sync', 'store'),
+    });
+    git(['push', '-q', 'origin', 'HEAD'], join(home, '.agent-sync', 'store'));
+
+    git(['remote', 'add', 'origin', bareProject], projectDir);
+    git(['add', '-A'], projectDir);
+    git(['commit', '-q', '-m', 'project with marker'], projectDir);
+    git(['push', '-q', 'origin', 'HEAD'], projectDir);
+
+    // A second machine, with the project cloned to a deliberately different path.
+    otherHome = join(workspace, 'other-home');
+    for (const dir of ['.claude', '.codex', '.cursor']) {
+      mkdirSync(join(otherHome, dir), { recursive: true });
+    }
+    checkout = join(otherHome, 'somewhere', 'else', 'acme-checkout');
+    mkdirSync(join(otherHome, 'somewhere', 'else'), { recursive: true });
+    runThere(['clone', bareLibrary, '--device', 'second'], otherHome);
+    execFileSync('git', ['clone', '-q', bareProject, checkout]);
+  });
+
+  it('starts with no idea where any project lives', () => {
+    const device = readFileSync(join(otherHome, '.agent-sync', 'device.yaml'), 'utf8');
+    expect(device).not.toContain('acme-app');
+  });
+
+  it('learns the local path from the marker, with no link step', () => {
+    const result = runThere(['apply'], checkout);
+    expect(result.code, result.stdout).toBe(0);
+
+    const device = readFileSync(join(otherHome, '.agent-sync', 'device.yaml'), 'utf8');
+    expect(device).toContain('acme-app');
+    // The path is this machine's, not the one from the other computer.
+    expect(device).toContain('acme-checkout');
+  });
+
+  it('deploys the project skill into the checkout', () => {
+    expect(existsSync(join(checkout, '.cursor', 'skills', 'db-migrate', 'SKILL.md'))).toBe(true);
+  });
+
+  it('works from a subdirectory of the checkout too', () => {
+    const nested = join(checkout, 'src');
+    mkdirSync(nested, { recursive: true });
+    expect(runThere(['status'], nested).stdout).toContain('db-migrate');
+  });
+});

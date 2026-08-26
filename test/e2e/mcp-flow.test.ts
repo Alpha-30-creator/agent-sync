@@ -276,9 +276,15 @@ describe('import: adopting what was already on the machine', () => {
     expect(result.stdout).not.toContain('not managed by agent-sync');
   });
 
-  it('finds nothing left to import', () => {
-    const parsed = JSON.parse(run(['--json', 'import']).stdout) as { candidates: unknown[] };
-    expect(parsed.candidates).toEqual([]);
+  it('has nothing left that it would adopt on its own', () => {
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { id: string; machineSpecific: boolean }[];
+      adoptable: number;
+    };
+    expect(parsed.adoptable).toBe(0);
+    // What remains is only what agent-sync deliberately leaves alone: servers carrying
+    // absolute paths, which belong to this machine rather than to the library.
+    expect(parsed.candidates.every((c) => c.machineSpecific)).toBe(true);
   });
 });
 
@@ -292,5 +298,51 @@ describe('removing an MCP server', () => {
 
     // Servers agent-sync never managed are still there.
     expect(readJson(join(home, '.cursor', 'mcp.json')).mcpServers).toHaveProperty('existing');
+  });
+});
+
+describe('leaving the agents’ own configuration alone', () => {
+  it('flags a machine-specific server and does not adopt it by default', () => {
+    // Shaped like Codex's bundled node_repl: absolute paths into an app bundle.
+    const codexPath = join(home, '.codex', 'config.toml');
+    writeFileSync(
+      codexPath,
+      `${readFileSync(codexPath, 'utf8')}
+[mcp_servers.app_bundled]
+command = "/Applications/Some.app/Contents/MacOS/server"
+`,
+    );
+
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { id: string; machineSpecific: boolean; notes: string[] }[];
+    };
+    const bundled = parsed.candidates.find((c) => c.id === 'app_bundled');
+    expect(bundled?.machineSpecific).toBe(true);
+    expect(bundled?.notes.join()).toContain('specific to this machine');
+
+    const adopted = JSON.parse(run(['--json', 'import', '--adopt']).stdout) as {
+      adopted: string[];
+    };
+    expect(adopted.adopted).not.toContain('mcp/app_bundled');
+  });
+
+  it('adopts one when asked for it explicitly', () => {
+    const result = JSON.parse(
+      run(['--json', 'import', '--adopt', '--only', 'mcp/app_bundled']).stdout,
+    ) as { adopted: string[] };
+    expect(result.adopted).toEqual(['mcp/app_bundled']);
+  });
+
+  it('never offers an agent’s own bundled skills', () => {
+    // Codex keeps its built-in skills in `.system`; they are not the user's to sync.
+    mkdirSync(join(home, '.codex', 'skills', '.system', 'skill-creator'), { recursive: true });
+    writeFileSync(
+      join(home, '.codex', 'skills', '.system', 'skill-creator', 'SKILL.md'),
+      '---\nname: skill-creator\ndescription: built in\n---\n',
+    );
+
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as { candidates: { id: string }[] };
+    expect(parsed.candidates.map((c) => c.id)).not.toContain('skill-creator');
+    expect(parsed.candidates.map((c) => c.id)).not.toContain('.system');
   });
 });

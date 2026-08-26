@@ -208,17 +208,32 @@ program
   .description('adopt skills and MCP servers already on this machine')
   .option('--adopt', 'actually bring them into the library (otherwise just reports)', false)
   .option('--agent <agent...>', 'restrict the scan to these agents')
-  .action((options: { adopt: boolean; agent?: string[] }) => {
-    const g = globals();
-    run(
-      runImport({
-        adopt: options.adopt,
-        json: g.json === true,
-        ...(g.store === undefined ? {} : { storeOverride: g.store }),
-        ...(options.agent === undefined ? {} : { agents: options.agent }),
-      }),
-    );
-  });
+  .option('--only <ref...>', 'adopt exactly these, e.g. mcp/github skill/db-migrate')
+  .option(
+    '--include-machine-specific',
+    'also adopt artifacts that look tied to this machine',
+    false,
+  )
+  .action(
+    (options: {
+      adopt: boolean;
+      agent?: string[];
+      only?: string[];
+      includeMachineSpecific: boolean;
+    }) => {
+      const g = globals();
+      run(
+        runImport({
+          adopt: options.adopt,
+          includeMachineSpecific: options.includeMachineSpecific,
+          json: g.json === true,
+          ...(g.store === undefined ? {} : { storeOverride: g.store }),
+          ...(options.agent === undefined ? {} : { agents: options.agent }),
+          ...(options.only === undefined ? {} : { only: options.only }),
+        }),
+      );
+    },
+  );
 
 const secret = program
   .command('secret')

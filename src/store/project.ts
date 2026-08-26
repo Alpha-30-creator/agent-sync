@@ -64,17 +64,26 @@ export const projectRemote = (projectDir: string): string | null => {
   return url === null ? null : normalizeRemote(url);
 };
 
-/** Register (or refresh) this device's path for a project. */
+/** Register (or refresh) this device's path for a project, clearing any opt-out. */
 export const registerProject = (device: Device, id: string, localPath: string): Device => ({
   ...device,
   projects: { ...device.projects, [id]: localPath },
+  unlinked: (device.unlinked ?? []).filter((entry) => entry !== id),
 });
 
+/**
+ * Forget a project on this device *and* remember that it was deliberate, so the marker
+ * committed inside the project does not quietly re-link it on the next command.
+ */
 export const unregisterProject = (device: Device, id: string): Device => {
   const projects = { ...device.projects };
   delete projects[id];
-  return { ...device, projects };
+  return { ...device, projects, unlinked: [...new Set([...(device.unlinked ?? []), id])].sort() };
 };
+
+/** True when this device has opted out of a project. */
+export const isUnlinked = (device: Device, id: string): boolean =>
+  (device.unlinked ?? []).includes(id);
 
 /**
  * Projects this device can act on: declared in the manifest *and* mapped to a path

@@ -24,6 +24,7 @@ import { copyTree, readTextFile, writeFileAtomic } from '../../shell/fs.js';
 import { setSecret } from '../../shell/secrets.js';
 import { skillDir } from '../../store/layout.js';
 import { type Lockfile, record, saveLockfile } from '../../store/lockfile.js';
+import { linkedProjects } from '../../store/project.js';
 import { EXIT, type ExitCode, emitJson, failure, info, line, success, warn } from '../output.js';
 
 export interface ImportCandidate {
@@ -31,15 +32,38 @@ export interface ImportCandidate {
   readonly id: string;
   readonly agent: AgentId;
   readonly source: string;
+  /** Project this was found in, when it was not in the agent's global directory. */
+  readonly project?: string;
   readonly notes: readonly string[];
+  /**
+   * True when the artifact looks tied to this machine — an absolute path in its
+   * configuration, for instance. Such things are listed but not adopted by default,
+   * because copying them to another computer produces configuration that cannot work.
+   */
+  readonly machineSpecific: boolean;
 }
 
 export interface ImportOptions {
   readonly adopt: boolean;
   readonly agents?: readonly string[];
+  /** Adopt only these references, e.g. `mcp/github`. */
+  readonly only?: readonly string[];
+  /** Adopt machine-specific candidates too. */
+  readonly includeMachineSpecific: boolean;
   readonly storeOverride?: string;
   readonly json: boolean;
 }
+
+/**
+ * Absolute paths are the one reliable signal that a server belongs to this machine
+ * rather than to you — Codex's bundled `node_repl` points into the ChatGPT app bundle,
+ * for example. It is only a hint: agents also install servers that look perfectly
+ * ordinary, which is why import reports before it adopts and lets you choose.
+ */
+const ABSOLUTE_PATH = /(^|["\s=])(\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\)/;
+
+const looksMachineSpecific = (entry: Readonly<Record<string, unknown>>): boolean =>
+  JSON.stringify(entry).match(ABSOLUTE_PATH) !== null;
 
 export const runImport = (options: ImportOptions): ExitCode => {
   const loaded = loadContext(options.storeOverride);
@@ -65,26 +89,56 @@ export const runImport = (options: ImportOptions): ExitCode => {
   const secretsToStore: Record<string, string> = {};
   const definitions = new Map<string, unknown>();
 
+  /**
+   * Scan one skills directory. Entries beginning with a dot are the agent's own:
+   * Codex keeps its bundled skills in `.system`, and Claude keeps plugin-provided
+   * skills in a separate tree entirely. Neither is yours to sync.
+   */
+  const scanSkills = (agent: AgentId, root: string | null, project: string | undefined): void => {
+    if (root === null || !existsSync(root)) return;
+
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      const id = entry.name;
+      if (id.startsWith('.') || knownSkills.has(id)) continue;
+      if (!existsSync(join(root, id, 'SKILL.md'))) continue;
+      if (candidates.some((c) => c.type === 'skill' && c.id === id && c.project === project))
+        continue;
+
+      const notes: string[] = [];
+      // Third-party tooling symlinks skills between agents; adopting the *content* is
+      // fine, but say so — applying afterwards replaces the link with a real folder.
+      if (entry.isSymbolicLink()) {
+        notes.push(
+          'this is a symlink from other tooling — applying will replace it with a real copy',
+        );
+      }
+      if (!ID_PATTERN.test(id)) {
+        notes.push(`"${id}" cannot be used as an id (lowercase letters, digits, - and _ only)`);
+      }
+      candidates.push({
+        type: 'skill',
+        id,
+        agent,
+        source: join(root, id),
+        ...(project === undefined ? {} : { project }),
+        notes,
+        machineSpecific: false,
+      });
+    }
+  };
+
   for (const agent of agents) {
     const capabilities = CAPABILITIES[agent];
+    scanSkills(agent, capabilities.globalSkillsRoot(context.facts), undefined);
 
-    // Skills: any directory with a SKILL.md that the library does not already have.
-    const skillsRoot = capabilities.globalSkillsRoot(context.facts);
-    if (skillsRoot !== null && existsSync(skillsRoot)) {
-      for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
-        const id = entry.name;
-        if (id.startsWith('.') || knownSkills.has(id)) continue;
-        if (!existsSync(join(skillsRoot, id, 'SKILL.md'))) continue;
-
-        const notes: string[] = [];
-        // Third-party tooling symlinks skills between agents; adopting the *content*
-        // is fine, but say so, because the original stays where it is.
-        if (entry.isSymbolicLink()) notes.push('this entry is a symlink created by other tooling');
-        if (!ID_PATTERN.test(id)) {
-          notes.push('id is not lowercase kebab-case — rename it before adopting');
-        }
-        candidates.push({ type: 'skill', id, agent, source: join(skillsRoot, id), notes });
-      }
+    // Project directories this device knows about, so project-scoped skills are found
+    // too rather than only the global ones.
+    for (const project of linkedProjects(context.device, Object.keys(manifest.projects ?? {}))) {
+      scanSkills(
+        agent,
+        capabilities.projectSkillsRoot(context.facts, project.localPath),
+        project.id,
+      );
     }
 
     // MCP servers declared in this agent's own configuration.
@@ -102,11 +156,18 @@ export const runImport = (options: ImportOptions): ExitCode => {
           agent,
           source: location.path,
           notes: ['could not be adopted', ...adopted.notes],
+          machineSpecific: false,
         });
         continue;
       }
 
       const notes = [...adopted.notes];
+      const machineSpecific = looksMachineSpecific(entry as Record<string, unknown>);
+      if (machineSpecific) {
+        notes.push(
+          'contains an absolute path — looks specific to this machine, so it is not adopted by default',
+        );
+      }
       if (!ID_PATTERN.test(id)) {
         // The id has to mirror the key inside the agent's own config, so agent-sync
         // cannot quietly rename it. Say what to do instead.
@@ -117,14 +178,18 @@ export const runImport = (options: ImportOptions): ExitCode => {
         definitions.set(id, adopted.definition);
         Object.assign(secretsToStore, adopted.extractedSecrets);
       }
-      candidates.push({ type: 'mcp', id, agent, source: location.path, notes });
+      candidates.push({ type: 'mcp', id, agent, source: location.path, notes, machineSpecific });
     }
   }
 
-  const adoptable = candidates.filter(
-    (candidate) =>
-      !candidate.notes.includes('could not be adopted') && ID_PATTERN.test(candidate.id),
-  );
+  const only = new Set(options.only ?? []);
+  const adoptable = candidates.filter((candidate) => {
+    if (candidate.notes.includes('could not be adopted')) return false;
+    if (!ID_PATTERN.test(candidate.id)) return false;
+    // An explicit selection means exactly that, machine-specific or not.
+    if (only.size > 0) return only.has(`${candidate.type}/${candidate.id}`);
+    return options.includeMachineSpecific || !candidate.machineSpecific;
+  });
 
   if (!options.adopt) {
     if (options.json) {
@@ -137,12 +202,22 @@ export const runImport = (options: ImportOptions): ExitCode => {
     }
     line(`found ${candidates.length} unmanaged artifact(s):`);
     for (const candidate of candidates) {
+      const where =
+        candidate.project === undefined
+          ? candidate.agent
+          : `${candidate.agent} · ${candidate.project}`;
+      // A leading dot marks something --adopt will skip, so the list itself shows what
+      // will and will not be taken.
+      const mark = adoptable.includes(candidate) ? ' ' : '·';
       line(
-        `  ${`${candidate.type}/${candidate.id}`.padEnd(32)} ${candidate.agent}  ${candidate.source}`,
+        `${mark} ${`${candidate.type}/${candidate.id}`.padEnd(30)} ${where}  ${candidate.source}`,
       );
       for (const note of candidate.notes) info(`      ${note}`);
     }
-    info('\nnothing was changed. re-run with --adopt to bring these into your library');
+    info(`\nnothing was changed. --adopt takes the ${adoptable.length} unmarked one(s).`);
+    if (adoptable.length < candidates.length) {
+      info('the ones marked · are skipped — use --only <ref>... to choose exactly what to adopt');
+    }
     return EXIT.ok;
   }
 

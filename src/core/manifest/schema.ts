@@ -96,6 +96,12 @@ export const deviceSchema = z
     device: identifier,
     agents: z.array(agentId),
     projects: z.record(identifier, z.string()).optional(),
+    /**
+     * Projects this device has deliberately opted out of. Kept separately from
+     * `projects` because agent-sync learns paths automatically from committed markers;
+     * without this, walking into an unlinked project would silently re-link it.
+     */
+    unlinked: z.array(identifier).optional(),
     /** `type/id` references switched off on this machine only. */
     disable: z.array(z.string()).optional(),
   })

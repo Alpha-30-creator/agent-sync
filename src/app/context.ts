@@ -16,6 +16,7 @@ import { ensureDir, readTextFile, writeFileAtomic } from '../shell/fs.js';
 import { readMachineFacts } from '../shell/machine.js';
 import { layoutFor, lockfileFor, type StoreLayout } from '../store/layout.js';
 import { type Lockfile, loadLockfile } from '../store/lockfile.js';
+import { findMarker, isUnlinked, registerProject } from '../store/project.js';
 
 export interface Context {
   readonly facts: MachineFacts;
@@ -50,6 +51,7 @@ const readYaml = (
 
 export const loadContext = (
   storeOverride?: string,
+  cwd?: string,
 ): { ok: true; value: Context } | { ok: false; failure: LoadFailure } => {
   const facts = readMachineFacts();
   const layout = layoutFor(facts.home, storeOverride);
@@ -82,6 +84,7 @@ export const loadContext = (
   }
 
   const lockfilePath = lockfileFor(layout, device.value.device);
+  const device_ = adoptMarkerHere(layout, manifest.value, device.value, cwd ?? process.cwd());
 
   return {
     ok: true,
@@ -89,11 +92,40 @@ export const loadContext = (
       facts,
       layout,
       manifest: manifest.value,
-      device: device.value,
-      lockfile: loadLockfile(lockfilePath, device.value.device),
+      device: device_,
+      lockfile: loadLockfile(lockfilePath, device_.device),
       lockfilePath,
     },
   };
+};
+
+/**
+ * Learn where a project lives on *this* machine, from the marker committed inside it.
+ *
+ * Project identity travels with the repository; the path does not, because it differs
+ * per device (docs/04-sync-model.md §3a). So whenever a command runs inside a project
+ * agent-sync knows about, the local path is recorded here — which is what lets a second
+ * computer pick up a project simply by cloning it, with no `link` step.
+ *
+ * Idempotent, and it only ever learns paths for projects the manifest already declares:
+ * a marker naming something unknown is reported by `doctor`, never invented.
+ */
+const adoptMarkerHere = (
+  layout: StoreLayout,
+  manifest: Manifest,
+  device: Device,
+  cwd: string,
+): Device => {
+  const marker = findMarker(cwd);
+  if (marker === null) return device;
+  if (manifest.projects?.[marker.id] === undefined) return device;
+  // An explicit `unlink` outranks the marker: learning must never undo a decision.
+  if (isUnlinked(device, marker.id)) return device;
+  if (device.projects?.[marker.id] === marker.dir) return device;
+
+  const updated = registerProject(device, marker.id, marker.dir);
+  writeFileAtomic(layout.device, stringify(updated));
+  return updated;
 };
 
 export const saveManifest = (layout: StoreLayout, manifest: Manifest): void => {

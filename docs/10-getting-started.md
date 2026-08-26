@@ -150,6 +150,30 @@ If you try to put a real credential directly into the library, agent-sync refuse
 tells you to use a secret instead. Secret values are never accepted as command
 arguments, because arguments end up in your shell history.
 
+## What it leaves alone
+
+Each agent ships its own built-in skills, and those are never yours to sync. Happily,
+every agent keeps them somewhere separate — Codex under `~/.codex/skills/.system/`,
+Claude under `~/.claude/plugins/…` — so `import` simply never looks at them. Anything
+beginning with a dot is treated as the agent's own.
+
+MCP servers are harder, because an agent's own servers sit in the same list as yours.
+Codex's `node_repl`, for instance, points at paths inside the ChatGPT app bundle;
+copying that to another computer would produce configuration that cannot work. So
+`import` flags anything containing an absolute path as **machine-specific** and does not
+adopt it by default:
+
+```
+  mcp/github          claude  ~/.claude.json
+· mcp/node_repl       codex   ~/.codex/config.toml
+      contains an absolute path — looks specific to this machine…
+```
+
+The `·` marks what will be skipped. Use `--only mcp/github skill/x` to pick exactly what
+you want, or `--include-machine-specific` to take everything. This is a hint, not
+certainty: an agent can install a server that looks perfectly ordinary, which is why
+import always reports before it adopts.
+
 ## Why you can trust it with your config
 
 - **It never overwrites your edits.** If you hand-edit a deployed file, `apply` stops
