@@ -52,7 +52,10 @@ beforeAll(() => {
   for (const dir of ['.claude', '.codex', '.cursor'])
     mkdirSync(join(home, dir), { recursive: true });
   mkdirSync(projectDir, { recursive: true });
-  execFileSync('git', ['init', '-q', projectDir]);
+  // Always name the branch: a bare repo created with `-b main` and a working repo
+  // created without it only agree on machines that set init.defaultBranch, so the
+  // clone would come out empty in CI.
+  execFileSync('git', ['init', '-q', '-b', 'main', projectDir]);
 
   run(['init', '--device', 'mac'], home);
   run(['new', 'skill', 'db-migrate', '--scope', 'project'], home);
