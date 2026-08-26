@@ -284,7 +284,14 @@ describe('a second machine recognises the project from its committed marker', ()
     expect(result.code, result.stdout).toBe(0);
 
     const device = readFileSync(join(otherHome, '.agent-sync', 'device.yaml'), 'utf8');
-    expect(device).toContain('acme-app');
+    const diagnosis = [
+      `apply said: ${result.stdout}`,
+      `marker present: ${existsSync(join(checkout, '.agent-sync.yaml'))}`,
+      `marker: ${existsSync(join(checkout, '.agent-sync.yaml')) ? readFileSync(join(checkout, '.agent-sync.yaml'), 'utf8') : '-'}`,
+      `cloned manifest: ${readFileSync(join(otherHome, '.agent-sync', 'store', 'agent-sync.yaml'), 'utf8')}`,
+      `device: ${device}`,
+    ].join('\n');
+    expect(device, diagnosis).toContain('acme-app');
     // The path is this machine's, not the one from the other computer.
     expect(device).toContain('acme-checkout');
   });
