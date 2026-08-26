@@ -209,6 +209,7 @@ program
   .option('--adopt', 'actually bring them into the library (otherwise just reports)', false)
   .option('--agent <agent...>', 'restrict the scan to these agents')
   .option('--only <ref...>', 'adopt exactly these, e.g. mcp/github skill/db-migrate')
+  .option('--as <mapping...>', 'rename on the way in: "Docs by LangChain=docs-langchain"')
   .option(
     '--include-machine-specific',
     'also adopt artifacts that look tied to this machine',
@@ -219,6 +220,7 @@ program
       adopt: boolean;
       agent?: string[];
       only?: string[];
+      as?: string[];
       includeMachineSpecific: boolean;
     }) => {
       const g = globals();
@@ -230,6 +232,7 @@ program
           ...(g.store === undefined ? {} : { storeOverride: g.store }),
           ...(options.agent === undefined ? {} : { agents: options.agent }),
           ...(options.only === undefined ? {} : { only: options.only }),
+          ...(options.as === undefined ? {} : { as: options.as }),
         }),
       );
     },

@@ -318,7 +318,7 @@ command = "/Applications/Some.app/Contents/MacOS/server"
     };
     const bundled = parsed.candidates.find((c) => c.id === 'app_bundled');
     expect(bundled?.machineSpecific).toBe(true);
-    expect(bundled?.notes.join()).toContain('specific to this machine');
+    expect(bundled?.notes.join()).toContain('absolute path');
 
     const adopted = JSON.parse(run(['--json', 'import', '--adopt']).stdout) as {
       adopted: string[];
@@ -344,5 +344,99 @@ command = "/Applications/Some.app/Contents/MacOS/server"
     const parsed = JSON.parse(run(['--json', 'import']).stdout) as { candidates: { id: string }[] };
     expect(parsed.candidates.map((c) => c.id)).not.toContain('skill-creator');
     expect(parsed.candidates.map((c) => c.id)).not.toContain('.system');
+  });
+});
+
+describe('servers that cannot be carried to another computer', () => {
+  it('spots a command that only resolves against a working directory', () => {
+    // Shaped like Codex's bundled computer-use: a relative command plus a cwd, which a
+    // portable definition cannot express — adopting it would deploy something broken.
+    const codexPath = join(home, '.codex', 'config.toml');
+    writeFileSync(
+      codexPath,
+      `${readFileSync(codexPath, 'utf8')}
+[mcp_servers.relative_cmd]
+command = "./Some.app/Contents/MacOS/server"
+cwd = "."
+`,
+    );
+
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { id: string; machineSpecific: boolean; notes: string[] }[];
+    };
+    const found = parsed.candidates.find((c) => c.id === 'relative_cmd');
+    expect(found?.machineSpecific).toBe(true);
+    expect(found?.notes.join()).toContain('relative path');
+    expect(found?.notes.join()).toContain('working directory');
+  });
+
+  it('leaves a server that is switched off switched off', () => {
+    const codexPath = join(home, '.codex', 'config.toml');
+    writeFileSync(
+      codexPath,
+      `${readFileSync(codexPath, 'utf8')}
+[mcp_servers.turned_off]
+command = "node"
+enabled = false
+`,
+    );
+
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { id: string; notes: string[] }[];
+    };
+    expect(parsed.candidates.find((c) => c.id === 'turned_off')?.notes.join()).toContain(
+      'switched off here',
+    );
+  });
+});
+
+describe('renaming on the way in', () => {
+  beforeAll(() => {
+    // Agents name servers freely; this one cannot be a library id as written.
+    const path = join(home, '.cursor', 'mcp.json');
+    const document = readJson(path) as unknown as { mcpServers: Record<string, unknown> };
+    document.mcpServers['Docs by LangChain'] = { url: 'https://docs.example/mcp' };
+    writeFileSync(path, JSON.stringify(document, null, 2));
+  });
+
+  it('explains that the name cannot be an id, and how to fix it', () => {
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { id: string; notes: string[] }[];
+    };
+    const found = parsed.candidates.find((c) => c.id === 'Docs by LangChain');
+    expect(found?.notes.join()).toContain('--as "Docs by LangChain=');
+  });
+
+  it('adopts it under a chosen id', () => {
+    const result = JSON.parse(
+      run([
+        '--json',
+        'import',
+        '--adopt',
+        '--as',
+        'Docs by LangChain=docs-langchain',
+        '--only',
+        'mcp/docs-langchain',
+      ]).stdout,
+    ) as { adopted: string[] };
+    expect(result.adopted).toEqual(['mcp/docs-langchain']);
+    expect(existsSync(join(home, '.agent-sync', 'store', 'mcp', 'docs-langchain.yaml'))).toBe(true);
+  });
+
+  it('says plainly that the agent’s own entry is left in place', () => {
+    const parsed = JSON.parse(
+      run(['--json', 'import', '--as', 'Docs by LangChain=docs-langchain']).stdout,
+    ) as { candidates: { id: string; notes: string[] }[] };
+    // Already adopted, so it no longer appears — but the original is untouched.
+    expect(parsed.candidates.map((c) => c.id)).not.toContain('docs-langchain');
+    expect(readJson(join(home, '.cursor', 'mcp.json')).mcpServers).toHaveProperty(
+      'Docs by LangChain',
+    );
+  });
+
+  it('rejects a mapping to an invalid id', () => {
+    const result = run(['import', '--as', 'Docs by LangChain=Not Valid']);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('is not a valid id');
   });
 });

@@ -32,6 +32,8 @@ export interface ImportCandidate {
   readonly id: string;
   readonly agent: AgentId;
   readonly source: string;
+  /** The name the agent uses, when it differs from the library id (see `--as`). */
+  readonly originalId?: string;
   /** Project this was found in, when it was not in the agent's global directory. */
   readonly project?: string;
   readonly notes: readonly string[];
@@ -48,22 +50,75 @@ export interface ImportOptions {
   readonly agents?: readonly string[];
   /** Adopt only these references, e.g. `mcp/github`. */
   readonly only?: readonly string[];
+  /** Rename on the way in: `original=new-id`, for names that cannot be ids. */
+  readonly as?: readonly string[];
   /** Adopt machine-specific candidates too. */
   readonly includeMachineSpecific: boolean;
   readonly storeOverride?: string;
   readonly json: boolean;
 }
 
-/**
- * Absolute paths are the one reliable signal that a server belongs to this machine
- * rather than to you — Codex's bundled `node_repl` points into the ChatGPT app bundle,
- * for example. It is only a hint: agents also install servers that look perfectly
- * ordinary, which is why import reports before it adopts and lets you choose.
- */
 const ABSOLUTE_PATH = /(^|["\s=])(\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\)/;
 
-const looksMachineSpecific = (entry: Readonly<Record<string, unknown>>): boolean =>
-  JSON.stringify(entry).match(ABSOLUTE_PATH) !== null;
+/**
+ * Reasons a server should not be copied to another computer.
+ *
+ * Two of these are about *faithfulness* rather than portability: a relative command
+ * only resolves against a working directory, and `cwd` is a field the canonical schema
+ * does not carry — so adopting such a server would produce a definition that cannot
+ * run. Codex's bundled `computer-use` is exactly this shape. Better to leave it alone
+ * and say why than to deploy something broken.
+ *
+ * These are hints, not certainties, which is why import reports before it adopts.
+ */
+const machineSpecificReasons = (entry: Readonly<Record<string, unknown>>): readonly string[] => {
+  const reasons: string[] = [];
+  const command = typeof entry.command === 'string' ? entry.command : '';
+
+  if (JSON.stringify(entry).match(ABSOLUTE_PATH) !== null) {
+    reasons.push('contains an absolute path, so it is tied to this machine');
+  }
+  if (/^\.{1,2}[\\/]/.test(command)) {
+    reasons.push('its command is a relative path, which only resolves on this machine');
+  }
+  if (typeof entry.cwd === 'string') {
+    reasons.push('it needs a working directory, which a portable definition cannot carry');
+  }
+  if (entry.enabled === false) {
+    reasons.push('it is switched off here, and adopting it would turn it on elsewhere');
+  }
+
+  return reasons;
+};
+
+/**
+ * Parse `--as original=new-id` pairs.
+ *
+ * Agents name MCP servers freely — `Docs by LangChain` is a perfectly ordinary name —
+ * but a library id has to be filesystem-safe and case-stable. Rather than rename
+ * silently, agent-sync asks you to choose.
+ */
+const parseRenames = (
+  values: readonly string[] | undefined,
+): { ok: true; value: Map<string, string> } | { ok: false; message: string } => {
+  const map = new Map<string, string>();
+  for (const value of values ?? []) {
+    const equals = value.lastIndexOf('=');
+    if (equals <= 0) {
+      return { ok: false, message: `--as expects "original=new-id", not "${value}"` };
+    }
+    const original = value.slice(0, equals).trim();
+    const renamed = value.slice(equals + 1).trim();
+    if (!ID_PATTERN.test(renamed)) {
+      return {
+        ok: false,
+        message: `"${renamed}" is not a valid id — lowercase letters, digits, - and _ only`,
+      };
+    }
+    map.set(original, renamed);
+  }
+  return { ok: true, value: map };
+};
 
 export const runImport = (options: ImportOptions): ExitCode => {
   const loaded = loadContext(options.storeOverride);
@@ -85,6 +140,14 @@ export const runImport = (options: ImportOptions): ExitCode => {
   const knownSkills = new Set(Object.keys(manifest.artifacts?.skill ?? {}));
   const knownMcp = new Set(Object.keys(manifest.artifacts?.mcp ?? {}));
 
+  const renames = parseRenames(options.as);
+  if (!renames.ok) {
+    if (options.json) emitJson('import', false, { error: renames.message });
+    else failure(renames.message);
+    return EXIT.error;
+  }
+  const renameOf = (id: string): string => renames.value.get(id) ?? id;
+
   const candidates: ImportCandidate[] = [];
   const secretsToStore: Record<string, string> = {};
   const definitions = new Map<string, unknown>();
@@ -98,9 +161,10 @@ export const runImport = (options: ImportOptions): ExitCode => {
     if (root === null || !existsSync(root)) return;
 
     for (const entry of readdirSync(root, { withFileTypes: true })) {
-      const id = entry.name;
-      if (id.startsWith('.') || knownSkills.has(id)) continue;
-      if (!existsSync(join(root, id, 'SKILL.md'))) continue;
+      const found = entry.name;
+      const id = renameOf(found);
+      if (found.startsWith('.') || knownSkills.has(id)) continue;
+      if (!existsSync(join(root, found, 'SKILL.md'))) continue;
       if (candidates.some((c) => c.type === 'skill' && c.id === id && c.project === project))
         continue;
 
@@ -119,7 +183,8 @@ export const runImport = (options: ImportOptions): ExitCode => {
         type: 'skill',
         id,
         agent,
-        source: join(root, id),
+        source: join(root, found),
+        ...(found === id ? {} : { originalId: found }),
         ...(project === undefined ? {} : { project }),
         notes,
         machineSpecific: false,
@@ -144,7 +209,8 @@ export const runImport = (options: ImportOptions): ExitCode => {
     // MCP servers declared in this agent's own configuration.
     const location = capabilities.globalMcp(context.facts);
     if (location === null) continue;
-    for (const [id, entry] of Object.entries(listMcpEntries(location))) {
+    for (const [found, entry] of Object.entries(listMcpEntries(location))) {
+      const id = renameOf(found);
       if (knownMcp.has(id) || definitions.has(id)) continue;
       if (entry === null || typeof entry !== 'object') continue;
 
@@ -155,6 +221,7 @@ export const runImport = (options: ImportOptions): ExitCode => {
           id,
           agent,
           source: location.path,
+          ...(found === id ? {} : { originalId: found }),
           notes: ['could not be adopted', ...adopted.notes],
           machineSpecific: false,
         });
@@ -162,23 +229,33 @@ export const runImport = (options: ImportOptions): ExitCode => {
       }
 
       const notes = [...adopted.notes];
-      const machineSpecific = looksMachineSpecific(entry as Record<string, unknown>);
-      if (machineSpecific) {
+      const reasons = machineSpecificReasons(entry as Record<string, unknown>);
+      const machineSpecific = reasons.length > 0;
+      notes.push(...reasons.map((reason) => `not adopted by default: ${reason}`));
+      if (found !== id) {
+        // Adopting under a new name leaves the agent's own entry in place; agent-sync
+        // will add a second one rather than rewriting something it does not manage.
         notes.push(
-          'contains an absolute path — looks specific to this machine, so it is not adopted by default',
+          `adopted as "${id}"; the agent's own "${found}" entry stays where it is — remove it yourself once you are happy`,
         );
       }
       if (!ID_PATTERN.test(id)) {
-        // The id has to mirror the key inside the agent's own config, so agent-sync
-        // cannot quietly rename it. Say what to do instead.
         notes.push(
-          `"${id}" cannot be used as an id (lowercase letters, digits, - and _ only) — add it manually with a valid id`,
+          `"${found}" cannot be used as an id (lowercase letters, digits, - and _ only) — re-run with --as "${found}=some-id"`,
         );
       } else {
         definitions.set(id, adopted.definition);
         Object.assign(secretsToStore, adopted.extractedSecrets);
       }
-      candidates.push({ type: 'mcp', id, agent, source: location.path, notes, machineSpecific });
+      candidates.push({
+        type: 'mcp',
+        id,
+        agent,
+        source: location.path,
+        ...(found === id ? {} : { originalId: found }),
+        notes,
+        machineSpecific,
+      });
     }
   }
 
@@ -247,7 +324,12 @@ export const runImport = (options: ImportOptions): ExitCode => {
       };
 
       const location = CAPABILITIES[candidate.agent].globalMcp(context.facts);
-      const current = location === null ? null : readMcpEntry(location, candidate.id);
+      // Renamed artifacts are not yet deployed under the new id, so there is nothing
+      // to record as already-synced.
+      const current =
+        location === null || candidate.originalId !== undefined
+          ? null
+          : readMcpEntry(location, candidate.id);
       if (location !== null && current !== null && current.kind === 'present') {
         const hash = hashEntry(current.value) ?? '';
         lockfile = record(lockfile, {
