@@ -134,3 +134,30 @@ describe('backups', () => {
     expect(backupFile(join(root, 'absent'), join(root, 'backups'), 'stamp')).toBeNull();
   });
 });
+
+describe('comparing content rather than encoding', () => {
+  it('treats a file as unchanged when only its line endings differ', () => {
+    // git on Windows rewrites line endings on checkout, so a project skill arrives
+    // with CRLF. That must not read as somebody having edited it.
+    write('lf/SKILL.md', 'one\ntwo\nthree\n');
+    const unix = treeHash(join(root, 'lf'));
+
+    write('lf/SKILL.md', 'one\r\ntwo\r\nthree\r\n');
+    expect(treeHash(join(root, 'lf'))).toBe(unix);
+  });
+
+  it('still notices a real change', () => {
+    write('real/SKILL.md', 'one\ntwo\n');
+    const before = treeHash(join(root, 'real'));
+    write('real/SKILL.md', 'one\r\ntwo\r\nthree\r\n');
+    expect(treeHash(join(root, 'real'))).not.toBe(before);
+  });
+
+  it('hashes binary content exactly, without rewriting anything', () => {
+    const withCrlf = Buffer.from([0x00, 0x0d, 0x0a, 0x01]);
+    const withLf = Buffer.from([0x00, 0x0a, 0x01]);
+    writeFileSync(join(root, 'a.bin'), withCrlf);
+    writeFileSync(join(root, 'b.bin'), withLf);
+    expect(fileHash(join(root, 'a.bin'))).not.toBe(fileHash(join(root, 'b.bin')));
+  });
+});

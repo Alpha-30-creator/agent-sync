@@ -20,8 +20,23 @@ import { dirname, join, relative, sep } from 'node:path';
 export const sha256 = (content: string | Buffer): string =>
   createHash('sha256').update(content).digest('hex');
 
+/**
+ * Content as it is compared, with CRLF folded to LF.
+ *
+ * A skill deployed into a project is committed to that project's repository, and git
+ * on Windows rewrites line endings on checkout. Comparing raw bytes would therefore
+ * report drift on every Windows machine for a file nobody touched — so comparison is
+ * over content, not encoding. Files containing a NUL byte are treated as binary and
+ * hashed exactly.
+ */
+const forComparison = (content: Buffer): Buffer => {
+  if (content.includes(0)) return content;
+  const text = content.toString('utf8');
+  return text.includes('\r\n') ? Buffer.from(text.replace(/\r\n/g, '\n'), 'utf8') : content;
+};
+
 export const fileHash = (path: string): string | null =>
-  existsSync(path) ? sha256(readFileSync(path)) : null;
+  existsSync(path) ? sha256(forComparison(readFileSync(path))) : null;
 
 /**
  * Hash of a directory tree: every file's relative path and content, in sorted order.
@@ -33,7 +48,7 @@ export const treeHash = (root: string): string | null => {
   const hash = createHash('sha256');
   for (const relativePath of listFiles(root)) {
     hash.update(relativePath.split(sep).join('/'));
-    hash.update(readFileSync(join(root, relativePath)));
+    hash.update(forComparison(readFileSync(join(root, relativePath))));
   }
   return hash.digest('hex');
 };

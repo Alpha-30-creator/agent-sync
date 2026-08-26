@@ -53,7 +53,11 @@ Explicitly avoided: any daemon/watcher dependency in v1 (chokidar only if/when `
 
 - **Paths:** all path construction goes through one module (`shell/paths.ts` + pure locators) using `node:path`; home resolution via `os.homedir()`; never string-concatenated separators. Windows path shapes are unit-tested from any OS because locators are pure over injected machine facts.
 - **No symlinks anywhere** ([Architecture §6](03-architecture.md)).
-- **Line endings:** artifacts are written byte-for-byte as stored (git's `.gitattributes` in the store pins `* -text` for skill content so git never rewrites them); hashing is content-exact.
+- **Line endings:** artifacts are written byte-for-byte as stored, and the store pins LF via
+  `.gitattributes`. Comparison, however, folds CRLF to LF before hashing: a project-scoped skill is
+  committed to the *user's* repository, whose git config we do not control, and git on Windows
+  rewrites line endings on checkout. Comparing raw bytes there would report drift on a file nobody
+  touched. Files containing a NUL byte are treated as binary and hashed exactly.
 - **Atomic writes:** temp file + `rename` in the same directory (rename is atomic on all three OSes within a volume).
 - **Case-insensitive filesystems** (macOS/Windows default): artifact ids are required lowercase-kebab to dodge collision surprises.
 - **CI is the enforcement:** every PR runs the full suite on all three OSes; "works on my Mac" cannot merge. Linux is covered by CI even though the author can't test it by hand — which is precisely why it's in the matrix.
