@@ -12,7 +12,7 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse, stringify } from 'yaml';
-import { CAPABILITIES } from '../../adapters/capability-table.js';
+import { CAPABILITIES, type McpLocation } from '../../adapters/capability-table.js';
 import { hashEntry, listMcpEntries, readMcpEntry } from '../../adapters/mcp.js';
 import { describeFailure, loadContext } from '../../app/context.js';
 import { mcpSourcePath } from '../../app/mcp.js';
@@ -229,9 +229,34 @@ export const runImport = (options: ImportOptions): ExitCode => {
       );
     }
 
-    // MCP servers declared in this agent's own configuration.
-    const location = capabilities.globalMcp(context.facts);
-    if (location === null) continue;
+    // MCP servers declared in this agent's configuration — globally, and inside each
+    // project we are looking at. Project MCP files are where credentials tend to sit in
+    // plain text, so leaving them undiscovered would miss the case that matters most.
+    const mcpPlaces: {
+      location: McpLocation | null;
+      project: string | undefined;
+      unlinked: boolean;
+    }[] = [
+      { location: capabilities.globalMcp(context.facts), project: undefined, unlinked: false },
+      ...places.map((place) => ({
+        location: capabilities.projectMcp(context.facts, place.dir),
+        project: place.project,
+        unlinked: place.unlinked,
+      })),
+    ];
+
+    for (const place of mcpPlaces) {
+      scanMcp(agent, place.location, place.project, place.unlinked);
+    }
+  }
+
+  function scanMcp(
+    agent: AgentId,
+    location: McpLocation | null,
+    project: string | undefined,
+    unlinkedProject: boolean,
+  ): void {
+    if (location === null) return;
     for (const [found, entry] of Object.entries(listMcpEntries(location))) {
       const id = renameOf(found);
       if (knownMcp.has(id) || definitions.has(id)) continue;
@@ -262,6 +287,11 @@ export const runImport = (options: ImportOptions): ExitCode => {
           `adopted as "${id}"; the agent's own "${found}" entry stays where it is — remove it yourself once you are happy`,
         );
       }
+      if (unlinkedProject) {
+        notes.push(
+          'found in this directory, which is not a registered project yet — run "agent-sync link" here first, then import again',
+        );
+      }
       if (!ID_PATTERN.test(id)) {
         notes.push(
           `"${found}" cannot be used as an id (lowercase letters, digits, - and _ only) — re-run with --as "${found}=some-id"`,
@@ -276,6 +306,7 @@ export const runImport = (options: ImportOptions): ExitCode => {
         agent,
         source: location.path,
         ...(found === id ? {} : { originalId: found }),
+        ...(project === undefined ? {} : { project }),
         notes,
         machineSpecific,
       });
@@ -364,10 +395,32 @@ export const runImport = (options: ImportOptions): ExitCode => {
       const definition = definitions.get(candidate.id);
       if (definition === undefined) continue;
       writeFileAtomic(mcpSourcePath(context.layout.mcp, candidate.id), stringify(definition));
+
+      // A server configured inside a project belongs to that project, not to every
+      // agent on every machine.
+      const scoped = candidate.project !== undefined;
       updated = {
         ...updated,
-        artifacts: { ...updated.artifacts, mcp: { ...updated.artifacts?.mcp, [candidate.id]: {} } },
+        artifacts: {
+          ...updated.artifacts,
+          mcp: {
+            ...updated.artifacts?.mcp,
+            [candidate.id]: scoped ? { scope: 'project' as const } : {},
+          },
+        },
       };
+
+      if (candidate.project !== undefined) {
+        const project = updated.projects?.[candidate.project] ?? {};
+        const include = new Set([...(project.include ?? []), `mcp/${candidate.id}`]);
+        updated = {
+          ...updated,
+          projects: {
+            ...updated.projects,
+            [candidate.project]: { ...project, include: [...include].sort() },
+          },
+        };
+      }
 
       const location = CAPABILITIES[candidate.agent].globalMcp(context.facts);
       // Renamed artifacts are not yet deployed under the new id, so there is nothing

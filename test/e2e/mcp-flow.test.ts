@@ -440,3 +440,79 @@ describe('renaming on the way in', () => {
     expect(result.stdout).toContain('is not a valid id');
   });
 });
+
+describe('MCP servers configured inside a project', () => {
+  let project: string;
+
+  const runIn = (args: readonly string[], cwd: string) => {
+    try {
+      return {
+        code: 0,
+        stdout: execFileSync(process.execPath, [CLI, ...args], {
+          cwd,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            HOME: home,
+            USERPROFILE: home,
+            GIT_AUTHOR_NAME: 'test',
+            GIT_AUTHOR_EMAIL: 'test@example.com',
+            GIT_COMMITTER_NAME: 'test',
+            GIT_COMMITTER_EMAIL: 'test@example.com',
+            NO_COLOR: '1',
+          },
+        }),
+      };
+    } catch (error) {
+      const failed = error as { status?: number; stdout?: string; stderr?: string };
+      return { code: failed.status ?? 1, stdout: `${failed.stdout ?? ''}${failed.stderr ?? ''}` };
+    }
+  };
+
+  beforeAll(() => {
+    project = join(workspace, 'a-project');
+    mkdirSync(join(project, '.cursor'), { recursive: true });
+    // Exactly the shape found in the wild: a project MCP file with a live token in it.
+    writeFileSync(
+      join(project, '.cursor', 'mcp.json'),
+      JSON.stringify(
+        {
+          mcpServers: {
+            'project-github': {
+              command: 'npx',
+              args: ['-y', 'server'],
+              env: { GITHUB_PERSONAL_ACCESS_TOKEN: `github_pat_${'x'.repeat(50)}` },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+  it('finds a server declared inside a project, not just global ones', () => {
+    const parsed = JSON.parse(runIn(['--json', 'import'], project).stdout) as {
+      candidates: { id: string; notes: string[] }[];
+    };
+    const found = parsed.candidates.find((c) => c.id === 'project-github');
+    expect(found).toBeDefined();
+    expect(found?.notes.join()).toContain('not a registered project yet');
+  });
+
+  it('adopts it as a project server, with its token kept off git', () => {
+    runIn(['link', 'a-project'], project);
+    runIn(['import', '--adopt', '--only', 'mcp/project-github'], project);
+
+    const manifest = readFileSync(join(home, '.agent-sync', 'store', 'agent-sync.yaml'), 'utf8');
+    expect(manifest).toContain('mcp/project-github');
+    expect(manifest).toContain('a-project');
+
+    const definition = readFileSync(
+      join(home, '.agent-sync', 'store', 'mcp', 'project-github.yaml'),
+      'utf8',
+    );
+    expect(definition).toContain('${secret:');
+    expect(definition).not.toContain('github_pat_');
+  });
+});
