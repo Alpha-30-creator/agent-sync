@@ -14,4 +14,16 @@ export default function setup(): void {
     cwd: fileURLToPath(new URL('..', import.meta.url)),
     stdio: 'inherit',
   });
+
+  /**
+   * Refuse a guessed git identity for every test process.
+   *
+   * A CI container cannot invent `user@hostname`, but a developer's machine can — so a
+   * test that forgot to supply an identity passed locally and failed in CI, with the
+   * real error swallowed by our git wrapper. Making the strict behaviour the default
+   * means that gap shows up on the machine where it is cheap to fix.
+   */
+  process.env.GIT_CONFIG_COUNT = '1';
+  process.env.GIT_CONFIG_KEY_0 = 'user.useConfigOnly';
+  process.env.GIT_CONFIG_VALUE_0 = 'true';
 }

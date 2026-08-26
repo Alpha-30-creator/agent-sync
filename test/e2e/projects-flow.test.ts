@@ -5,7 +5,7 @@
  * only — except one, which also goes to Codex.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -249,10 +249,10 @@ describe('a second machine recognises the project from its committed marker', ()
 
     run(['link', 'acme-app']);
     run(['include', 'skill/db-migrate']);
-    execFileSync(process.execPath, [CLI, 'save', '-m', 'library'], {
-      cwd: home,
-      env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
-    });
+    // Always go through `run`: it carries the git identity these commits need. Calling
+    // the CLI directly picked up whatever identity the developer's machine happened to
+    // have, which is exactly the kind of hidden dependency this suite exists to catch.
+    run(['save', '-m', 'library']);
     execFileSync('git', ['remote', 'add', 'origin', bareLibrary], {
       cwd: join(home, '.agent-sync', 'store'),
     });
@@ -297,5 +297,76 @@ describe('a second machine recognises the project from its committed marker', ()
     const nested = join(checkout, 'src');
     mkdirSync(nested, { recursive: true });
     expect(runThere(['status'], nested).stdout).toContain('db-migrate');
+  });
+});
+
+describe('finding skills that already live inside a project', () => {
+  let bare: string;
+  let other: string;
+
+  beforeAll(() => {
+    // A project with skills nobody has told agent-sync about yet.
+    bare = join(workspace, 'unmanaged-project');
+    mkdirSync(join(bare, '.claude', 'skills', 'house-style'), { recursive: true });
+    writeFileSync(
+      join(bare, '.claude', 'skills', 'house-style', 'SKILL.md'),
+      '---\nname: house-style\ndescription: repo conventions\n---\n',
+    );
+    other = join(workspace, 'other-place');
+    mkdirSync(other, { recursive: true });
+  });
+
+  it('does not see them from somewhere else', () => {
+    const parsed = JSON.parse(
+      execFileSync(process.execPath, [CLI, '--json', 'import'], {
+        cwd: other,
+        encoding: 'utf8',
+        env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
+      }),
+    ) as { candidates: { id: string }[] };
+    expect(parsed.candidates.map((c) => c.id)).not.toContain('house-style');
+  });
+
+  it('finds them when run inside the project, and says it must be linked first', () => {
+    const parsed = JSON.parse(
+      execFileSync(process.execPath, [CLI, '--json', 'import'], {
+        cwd: bare,
+        encoding: 'utf8',
+        env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
+      }),
+    ) as { candidates: { id: string; notes: string[] }[]; adoptable: number };
+
+    const found = parsed.candidates.find((c) => c.id === 'house-style');
+    expect(found).toBeDefined();
+    expect(found?.notes.join()).toContain('not a registered project yet');
+    // Adopting now would turn a project skill into a global one, so it is held back.
+    expect(parsed.adoptable).toBe(0);
+  });
+
+  it('adopts it as a project skill once the project is linked', () => {
+    const runIn = (args: readonly string[]) =>
+      execFileSync(process.execPath, [CLI, ...args], {
+        cwd: bare,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          HOME: home,
+          USERPROFILE: home,
+          GIT_AUTHOR_NAME: 'test',
+          GIT_AUTHOR_EMAIL: 'test@example.com',
+          GIT_COMMITTER_NAME: 'test',
+          GIT_COMMITTER_EMAIL: 'test@example.com',
+          NO_COLOR: '1',
+        },
+      });
+
+    runIn(['link', 'unmanaged-project']);
+    runIn(['import', '--adopt', '--only', 'skill/house-style']);
+
+    const manifest = readFileSync(join(home, '.agent-sync', 'store', 'agent-sync.yaml'), 'utf8');
+    // Project-scoped, and included in that project — not silently made global.
+    expect(manifest).toContain('scope: project');
+    expect(manifest).toContain('skill/house-style');
+    expect(manifest).toContain('unmanaged-project');
   });
 });

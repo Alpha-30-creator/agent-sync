@@ -28,7 +28,13 @@ export const runSync = (options: SyncOptions): ExitCode => {
   const context = loaded.value;
   const store = context.layout.store;
 
-  const committed = git.commitAll(store, 'chore: update library');
+  const commit = git.commitAll(store, 'chore: update library');
+  if (commit.kind === 'failed') {
+    if (options.json) emitJson('sync', false, { stage: 'commit', error: commit.message });
+    else failure(commit.message);
+    return EXIT.error;
+  }
+  const committed = commit.kind === 'committed';
   const hasRemote = git.remoteUrl(store) !== null;
   const pulled = hasRemote ? git.pull(store) : { ok: true, output: 'no remote configured' };
 

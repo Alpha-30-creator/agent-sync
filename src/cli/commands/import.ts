@@ -24,7 +24,7 @@ import { copyTree, readTextFile, writeFileAtomic } from '../../shell/fs.js';
 import { setSecret } from '../../shell/secrets.js';
 import { skillDir } from '../../store/layout.js';
 import { type Lockfile, record, saveLockfile } from '../../store/lockfile.js';
-import { linkedProjects } from '../../store/project.js';
+import { findMarker, linkedProjects } from '../../store/project.js';
 import { EXIT, type ExitCode, emitJson, failure, info, line, success, warn } from '../output.js';
 
 export interface ImportCandidate {
@@ -157,7 +157,12 @@ export const runImport = (options: ImportOptions): ExitCode => {
    * Codex keeps its bundled skills in `.system`, and Claude keeps plugin-provided
    * skills in a separate tree entirely. Neither is yours to sync.
    */
-  const scanSkills = (agent: AgentId, root: string | null, project: string | undefined): void => {
+  const scanSkills = (
+    agent: AgentId,
+    root: string | null,
+    project: string | undefined,
+    unlinkedProject = false,
+  ): void => {
     if (root === null || !existsSync(root)) return;
 
     for (const entry of readdirSync(root, { withFileTypes: true })) {
@@ -179,6 +184,11 @@ export const runImport = (options: ImportOptions): ExitCode => {
       if (!ID_PATTERN.test(id)) {
         notes.push(`"${id}" cannot be used as an id (lowercase letters, digits, - and _ only)`);
       }
+      if (unlinkedProject) {
+        notes.push(
+          'found in this directory, which is not a registered project yet — run "agent-sync link" here first, then import again',
+        );
+      }
       candidates.push({
         type: 'skill',
         id,
@@ -192,17 +202,30 @@ export const runImport = (options: ImportOptions): ExitCode => {
     }
   };
 
+  // Directories to look in for project-scoped skills: every project this device has
+  // linked, plus — importantly — the one you are standing in. Without the latter,
+  // `import` could only ever find projects it already knew about, which is useless for
+  // the case that matters: a project whose skills are not managed yet.
+  const marker = findMarker(process.cwd());
+  const here = marker?.dir ?? process.cwd();
+  const linked = linkedProjects(context.device, Object.keys(manifest.projects ?? {}));
+  const places: { dir: string; project: string | undefined; unlinked: boolean }[] = [
+    ...linked.map((project) => ({ dir: project.localPath, project: project.id, unlinked: false })),
+  ];
+  if (!linked.some((project) => project.localPath === here)) {
+    places.push({ dir: here, project: marker?.id, unlinked: true });
+  }
+
   for (const agent of agents) {
     const capabilities = CAPABILITIES[agent];
     scanSkills(agent, capabilities.globalSkillsRoot(context.facts), undefined);
 
-    // Project directories this device knows about, so project-scoped skills are found
-    // too rather than only the global ones.
-    for (const project of linkedProjects(context.device, Object.keys(manifest.projects ?? {}))) {
+    for (const place of places) {
       scanSkills(
         agent,
-        capabilities.projectSkillsRoot(context.facts, project.localPath),
-        project.id,
+        capabilities.projectSkillsRoot(context.facts, place.dir),
+        place.project,
+        place.unlinked,
       );
     }
 
@@ -262,6 +285,9 @@ export const runImport = (options: ImportOptions): ExitCode => {
   const only = new Set(options.only ?? []);
   const adoptable = candidates.filter((candidate) => {
     if (candidate.notes.includes('could not be adopted')) return false;
+    // Adopting a project skill before the project exists would silently turn it into a
+    // global one, which is not what anyone means.
+    if (candidate.notes.some((note) => note.includes('not a registered project yet'))) return false;
     if (!ID_PATTERN.test(candidate.id)) return false;
     // An explicit selection means exactly that, machine-specific or not.
     if (only.size > 0) return only.has(`${candidate.type}/${candidate.id}`);
@@ -307,13 +333,33 @@ export const runImport = (options: ImportOptions): ExitCode => {
   for (const candidate of adoptable) {
     if (candidate.type === 'skill') {
       copyTree(candidate.source, skillDir(context.layout, candidate.id));
+
+      // A skill found inside a project stays a project skill: it is marked
+      // project-scoped and added to that project's include list, rather than quietly
+      // becoming a global one deployed into every agent everywhere.
+      const scoped = candidate.project !== undefined;
       updated = {
         ...updated,
         artifacts: {
           ...updated.artifacts,
-          skill: { ...updated.artifacts?.skill, [candidate.id]: {} },
+          skill: {
+            ...updated.artifacts?.skill,
+            [candidate.id]: scoped ? { scope: 'project' as const } : {},
+          },
         },
       };
+
+      if (candidate.project !== undefined) {
+        const project = updated.projects?.[candidate.project] ?? {};
+        const include = new Set([...(project.include ?? []), `skill/${candidate.id}`]);
+        updated = {
+          ...updated,
+          projects: {
+            ...updated.projects,
+            [candidate.project]: { ...project, include: [...include].sort() },
+          },
+        };
+      }
     } else {
       const definition = definitions.get(candidate.id);
       if (definition === undefined) continue;
@@ -364,8 +410,12 @@ export const runImport = (options: ImportOptions): ExitCode => {
   for (const name of Object.keys(secretsToStore)) {
     info(`  kept a credential on this device as secret "${name}" — it is not in the library`);
   }
-  for (const candidate of candidates.filter((c) => !adoptable.includes(c))) {
-    warn(`skipped ${candidate.type}/${candidate.id}: ${candidate.notes.join('; ')}`);
+  // With an explicit selection, everything else was skipped on purpose; listing it all
+  // as a warning would bury the result.
+  if (only.size === 0) {
+    for (const candidate of candidates.filter((c) => !adoptable.includes(c))) {
+      warn(`skipped ${candidate.type}/${candidate.id}: ${candidate.notes.join('; ')}`);
+    }
   }
   if (adoptedRefs.length > 0) info('\nnext: agent-sync apply, then agent-sync save');
   return EXIT.ok;

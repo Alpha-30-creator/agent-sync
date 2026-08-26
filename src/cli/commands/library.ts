@@ -250,7 +250,15 @@ export const runSave = (options: SaveOptions): ExitCode => {
   }
 
   const result = apply(context, { dryRun: false, answer: 'ask' });
-  const committed = git.commitAll(context.layout.store, options.message ?? 'chore: update library');
+  const commit = git.commitAll(context.layout.store, options.message ?? 'chore: update library');
+
+  if (commit.kind === 'failed') {
+    if (options.json) emitJson('save', false, { error: commit.message, written: result.written });
+    else failure(commit.message);
+    return EXIT.error;
+  }
+
+  const committed = commit.kind === 'committed';
   const pushed = options.push && committed ? git.push(context.layout.store).ok : false;
 
   if (options.json) {

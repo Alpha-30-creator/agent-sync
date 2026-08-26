@@ -9,7 +9,7 @@ import { ensureDir, writeFileAtomic } from '../../shell/fs.js';
 import { detectAgents, readMachineFacts } from '../../shell/machine.js';
 import * as git from '../../store/git.js';
 import { layoutFor } from '../../store/layout.js';
-import { EXIT, type ExitCode, emitJson, failure, info, line, success } from '../output.js';
+import { EXIT, type ExitCode, emitJson, failure, info, line, success, warn } from '../output.js';
 
 const STORE_README = `# agent-sync store
 
@@ -71,7 +71,12 @@ export const runInit = (options: InitOptions): ExitCode => {
     writeFileAtomic(`${layout.store}/.gitattributes`, GITATTRIBUTES);
 
     if (!git.isRepository(layout.store)) git.init(layout.store);
-    git.commitAll(layout.store, 'chore: initialise agent-sync store');
+    const commit = git.commitAll(layout.store, 'chore: initialise agent-sync store');
+    if (commit.kind === 'failed') {
+      // The store is usable; it simply has nothing committed yet. Say so rather than
+      // failing the whole setup.
+      warn(commit.message);
+    }
   }
 
   if (options.remote !== undefined) git.setRemote(layout.store, options.remote);

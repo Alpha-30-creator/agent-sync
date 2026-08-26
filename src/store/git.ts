@@ -34,11 +34,36 @@ export const init = (cwd: string): GitResult => git(cwd, ['init', '-q', '-b', 'm
 export const hasChanges = (cwd: string): boolean =>
   git(cwd, ['status', '--porcelain']).output.length > 0;
 
-/** Stage everything and commit. Returns false when there was nothing to commit. */
-export const commitAll = (cwd: string, message: string): boolean => {
+/**
+ * Stage everything and commit.
+ *
+ * "Nothing to commit" and "the commit failed" are different events and must not look
+ * alike: a machine with no configured git identity cannot commit at all, and reporting
+ * that as "nothing to commit" hides the one thing the user needs to fix.
+ */
+export type CommitOutcome =
+  | { readonly kind: 'committed' }
+  | { readonly kind: 'nothing-to-commit' }
+  | { readonly kind: 'failed'; readonly message: string };
+
+export const commitAll = (cwd: string, message: string): CommitOutcome => {
   git(cwd, ['add', '-A']);
-  if (!hasChanges(cwd)) return false;
-  return git(cwd, ['commit', '-q', '-m', message]).ok;
+  if (!hasChanges(cwd)) return { kind: 'nothing-to-commit' };
+
+  const result = git(cwd, ['commit', '-q', '-m', message]);
+  if (result.ok) return { kind: 'committed' };
+
+  const identityMissing = /user\.email|user\.name|identity unknown|tell me who you are/i.test(
+    result.output,
+  );
+  return {
+    kind: 'failed',
+    message: identityMissing
+      ? `git has no identity configured on this machine, so the library cannot be committed:\n` +
+        `  git config --global user.name "Your Name"\n` +
+        `  git config --global user.email "you@example.com"`
+      : `git could not commit the library:\n${result.output}`,
+  };
 };
 
 export const remoteUrl = (cwd: string): string | null => {
