@@ -358,14 +358,16 @@ this machine.
 Stored on the machine, never in the library, never in git.
 
 ```bash
-printf %s 'ghp_yourtoken' | agent-sync secret set github-token --stdin
+agent-sync secret set github-token          # asks you for the value; typing is hidden
 agent-sync secret ls
 agent-sync secret rm github-token
+
+printf %s 'ghp_yourtoken' | agent-sync secret set github-token --stdin   # for scripts
 ```
 
 | Command | Meaning |
 |---|---|
-| `secret set <name> --stdin` | Store a value, read from stdin. |
+| `secret set <name>` | Store a value. At a terminal it asks you and hides your typing; with `--stdin` it reads the value from a pipe, for scripts and agents. |
 | `secret rm <name>` | Remove a secret from this machine. |
 | `secret ls` | List secret **names**. Values are never printed. |
 

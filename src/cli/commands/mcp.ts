@@ -6,6 +6,7 @@
  * prompt only (docs/09-agent-native.md §4.2).
  */
 import { existsSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { parse, stringify } from 'yaml';
 import { describeFailure, loadContext } from '../../app/context.js';
 import { mcpSourcePath } from '../../app/mcp.js';
@@ -166,6 +167,25 @@ const readStdin = async (): Promise<string> => {
   return Buffer.concat(chunks).toString('utf8').trim();
 };
 
+/**
+ * Ask for a secret at the keyboard, without echoing it.
+ *
+ * Piping a value in is the right thing for scripts and agents, but telling a person at
+ * a terminal to construct a pipeline is unhelpful — so when someone runs this
+ * interactively, just ask them.
+ */
+const promptForSecret = async (name: string): Promise<string> => {
+  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+  const answer = await new Promise<string>((resolve) => {
+    rl.question(`Value for "${name}" (typing is hidden): `, resolve);
+    // Suppress echo only after the question itself has been printed.
+    (rl as unknown as { _writeToOutput: (text: string) => void })._writeToOutput = () => {};
+  });
+  rl.close();
+  process.stdout.write('\n');
+  return answer.trim();
+};
+
 export const runSecret = async (options: SecretOptions): Promise<ExitCode> => {
   const context = load(options.storeOverride, options.json, 'secret');
   if (context === null) return EXIT.error;
@@ -195,17 +215,16 @@ export const runSecret = async (options: SecretOptions): Promise<ExitCode> => {
     return EXIT.ok;
   }
 
-  if (!options.stdin && process.stdin.isTTY === true) {
-    failure(
-      'pipe the value in rather than typing it as an argument, so it stays out of your shell history:\n' +
-        `  printf %s "<value>" | agent-sync secret set ${name} --stdin`,
-    );
-    return EXIT.error;
-  }
+  // At a keyboard: ask, with the typing hidden. Piped or scripted: read stdin. Either
+  // way the value is never an argument, because arguments are recorded in shell history
+  // and visible in process listings.
+  const interactive = !options.stdin && process.stdin.isTTY === true;
+  const value = interactive ? await promptForSecret(name) : await readStdin();
 
-  const value = await readStdin();
   if (value.length === 0) {
-    failure('no value received on stdin');
+    failure(
+      interactive ? 'nothing entered — the secret was not stored' : 'no value received on stdin',
+    );
     return EXIT.error;
   }
 
