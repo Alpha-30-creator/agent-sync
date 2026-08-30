@@ -40,6 +40,7 @@ Read them in order — each builds on the previous one:
 | 7 | [Testing Strategy](docs/07-testing.md) | Test pyramid, cross-platform CI, how purity makes the core trivially testable |
 | 8 | [Roadmap](docs/08-roadmap.md) | Milestones from v0.1 to v1.0, and open questions |
 | 0 | [Getting Started](docs/10-getting-started.md) | Start here if you just want to use it: the mental model, the commands, and the safety guarantees |
+| 0 | [Command Reference](docs/11-command-reference.md) | Every command, option, and example |
 | 9 | [Agent-Native Design](docs/09-agent-native.md) | Agents as installer and interface: the paste-line install, the agent-sync skill pack, transactional auto-sync, and heartbeat hooks |
 
 ## The 30-second mental model
