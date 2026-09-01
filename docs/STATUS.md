@@ -54,8 +54,12 @@ so real findings are not buried.
 ## Next step (do this first)
 
 **Finish M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the owner adopts the tool
-for real on both machines. Rehearse against a sandbox `HOME` seeded from the probe output first;
-nothing touches `~` until that is clean.
+for real on both machines.
+
+The blanket "rehearse everything in a sandbox first" rule is **waived by the owner** (2026-09-01):
+he is adopting against his real `~`. Keep rehearsing new write paths in a sandbox `HOME` before
+handing them over — `init --create-remote` was exercised that way, with a stub `gh` and a real
+git push — but do not block his adoption on a full sandbox pass.
 
 **One setup gap left**, from the owner's first real `init` attempt:
 
