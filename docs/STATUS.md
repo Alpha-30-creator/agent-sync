@@ -3,8 +3,8 @@
 > Purpose: a session with **zero prior context** can read this file and resume correctly.
 > Update it at the end of every work session, and before any risky/long operation.
 
-**Last updated:** 2026-08-25
-**Current milestone:** M0 — spikes & verification ([roadmap](08-roadmap.md))
+**Last updated:** 2026-09-01
+**Current milestone:** M3.5 — acceptance / dogfooding ([roadmap](08-roadmap.md))
 
 ## Where things stand
 
@@ -29,14 +29,37 @@
 - ✅ **M1 complete** — skills end to end. Manifest schema + two-pass validation, the precedence
   resolver with provenance, drift classification, the pure planner, git-backed store, lockfile,
   atomic-write shell, and the CLI (`init`, `clone`, `apply`, `status`, `sync`, `add skill`,
-  `new skill`, `save`, `rm`, `doctor`). 215 tests including 20 end-to-end scenarios; CI green on
-  3 OSes.
+  `new skill`, `save`, `rm`, `doctor`). CI green on 3 OSes.
+- ✅ Docs for users: [getting started](10-getting-started.md) and the full
+  [command reference](11-command-reference.md).
+- ✅ Post-M3 fixes: `import` now finds MCP servers configured inside projects and discovers project
+  skills without mistaking them for global ones; artifact comparison ignores line endings; `secret
+  set` prompts for the value instead of demanding a pipeline.
+- 🔄 **M3.5 in progress** — the owner has begun adopting the tool on the Mac. First friction point
+  found immediately: the CLI is not installed as a global command (see *Next step*).
+
+**Verified green on 2026-09-01** (re-run, not inherited from an earlier session): `typecheck`
+clean; `check:deps` clean (50 modules, 191 dependencies, no violations); **349 tests across 21
+files** including 72 e2e assertions; `build` + CLI smoke good; CI green on `main`.
+
+Known cosmetic issue: `pnpm lint` emits 23 `noTemplateCurlyInString` warnings, every one a false
+positive on the deliberate `${secret:…}` / `${env:…}` indirection literals. Worth a Biome override
+so real findings are not buried.
 
 ## Next step (do this first)
 
-**Next: M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the owner adopts the tool
+**Finish M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the owner adopts the tool
 for real on both machines. Rehearse against a sandbox `HOME` seeded from the probe output first;
 nothing touches `~` until that is clean.
+
+**Currently blocked on two setup gaps**, both found by the owner's first real `init` attempt:
+
+1. `agent-sync` is not on `PATH` — the package has never been linked or installed globally, and
+   pnpm's global bin dir (`~/Library/pnpm/bin`) is itself missing from `PATH`, so a global link
+   alone would not be enough. Until v1.0 ships to npm, the rehearsal should run the built entry
+   point directly (`node dist/cli/index.js`) or through a linked global bin.
+2. The store remote `Alpha-30-creator/agent-library` does not exist yet, so `init --remote` will
+   fail at the first push even once the command resolves. Creating it is an owner action.
 
 Then **M4**: plugin declarations (Claude *and* Codex — see Q9), the agent-native pieces (the three
 interface skills, `INSTALL.md`, `setup`, heartbeat hooks), and OSS packaging for v1.0.
@@ -79,7 +102,9 @@ machine without touching `~`.
 
 ## Owner-only actions (blocked on the human)
 
-- Windows probe run (M0).
+- Create the store repo `Alpha-30-creator/agent-library` before the first `init --remote` (M3.5).
+- Install/link the CLI so `agent-sync` resolves on this Mac (M3.5).
+- ~~Windows probe run (M0).~~ Done 2026-08-25.
 - npm publish / org creation (M4).
 - Anything touching his accounts or making the project's first public announcement.
 

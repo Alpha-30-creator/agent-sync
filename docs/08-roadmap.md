@@ -11,48 +11,48 @@ De-risk the two things the whole design leans on, before writing product code.
 - [x] **Probe tooling:** `scripts/probe.mjs` reports layout + file shape (never contents) on any OS.
 - [x] **Landscape verification — macOS:** all three agents probed; Cursor global skills dir confirmed (Q1 resolved); **Codex plugin system discovered** (Q9 raised); symlinked third-party skills found in the wild (Q10 raised). Recorded in [Agent Landscape §5a](02-agent-landscape.md).
 - [x] **Landscape verification — Windows 11:** layout identical to macOS (Q6 resolved); Codex plugins confirmed cross-platform; agent versions drift between the owner's machines, so `verifiedAgainst` must be a range.
-- [ ] **Positive MCP tests:** add a throwaway server via each agent's own CLI/UI, re-probe, and confirm exactly which file each agent writes (the Mac has no Claude MCP servers configured, so its location is still unconfirmed).
-- [ ] Encode all of the above as the first `capability-table.ts` with `verifiedAgainst` versions.
-- [ ] **TOML surgical-edit spike:** take the author's real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
-- [ ] Scaffold: repo, pnpm, TS strict, Biome, Vitest, dependency-cruiser rule, 3-OS CI running one trivial test.
+- [x] **Positive MCP tests:** add a throwaway server via each agent's own CLI/UI, re-probe, and confirm exactly which file each agent writes (the Mac has no Claude MCP servers configured, so its location is still unconfirmed).
+- [x] Encode all of the above as the first `capability-table.ts` with `verifiedAgainst` versions.
+- [x] **TOML surgical-edit spike:** take the author's real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
+- [x] Scaffold: repo, pnpm, TS strict, Biome, Vitest, dependency-cruiser rule, 3-OS CI running one trivial test.
 
-**Exit:** all [verify] markers resolved; write path proven safe on real config files; CI matrix green.
+**Exit:** ✅ done. All [verify] markers resolved; write path proven safe on real config files; CI matrix green.
 
 ## M1 — Skills, end to end (v0.1) (≈ 2 weeks)
 
 The narrowest full slice: **global-scope skills, all three agents, two devices.**
 
-- [ ] Core model + manifest parsing/validation (skills only), resolver layers 4→2 (no projects yet)
-- [ ] Store init/clone/sync (git wrapper), lockfile, drift classification, planner, apply pipeline with dry-run
-- [ ] Skill deployment writers for all three agents (global scope)
-- [ ] Commands: `init`, `clone`, `sync`, `apply`, `status`, `add skill`, `new`, `save`, `rm`, `doctor` (minimal)
-- [ ] Agent-mode CLI contract from day one: non-TTY ⇒ non-interactive, `--json` + `schemaVersion`, exit codes; transactional `autoSync` ([Agent-Native §4.2, §5 tier 0](09-agent-native.md))
-- [ ] Test layers 1–2 for everything above; e2e scenarios 1, 2, 4
+- [x] Core model + manifest parsing/validation (skills only), resolver layers 4→2 (no projects yet)
+- [x] Store init/clone/sync (git wrapper), lockfile, drift classification, planner, apply pipeline with dry-run
+- [x] Skill deployment writers for all three agents (global scope)
+- [x] Commands: `init`, `clone`, `sync`, `apply`, `status`, `add skill`, `new`, `save`, `rm`, `doctor` (minimal)
+- [x] Agent-mode CLI contract from day one: non-TTY ⇒ non-interactive, `--json` + `schemaVersion`, exit codes; transactional `autoSync` ([Agent-Native §4.2, §5 tier 0](09-agent-native.md))
+- [x] Test layers 1–2 for everything above; e2e scenarios 1, 2, 4
 
-**Exit:** the full skills slice works end to end against sandbox homes on all three OSes.
+**Exit:** ✅ done. The full skills slice works end to end against sandbox homes on all three OSes.
 (Real-machine adoption is deliberately deferred — see the acceptance phase before M4.)
 
 ## M2 — Projects & full routing (v0.2) (≈ 2 weeks)
 
-- [ ] Project model: `link`/`unlink`, `include`/`exclude`, resolver layers 3 and 1, `add`/`remove` modifiers, device masks (`disable`/`enable`)
-- [ ] `.agent-sync.yaml` project marker + auto-registration + git-remote suggestion ([Sync Model §3a](04-sync-model.md))
-- [ ] First cut of the interface skill pack (`agent-sync-create-skill` + the `agent-sync` manager's routing/status flows) and `setup` deploying it — dogfood the "create me a skill" flow early, it will reshape the CLI ergonomics
-- [ ] Project-scope skill deployment incl. the Cursor overlap/minimum-copy strategy + honest `status` reporting
-- [ ] `route` command family; `status --why` provenance output
-- [ ] Property-test suite for the resolver invariants
-- [ ] e2e scenario 3 (the PRD scenario)
+- [x] Project model: `link`/`unlink`, `include`/`exclude`, resolver layers 3 and 1, `add`/`remove` modifiers, device masks (`disable`/`enable`)
+- [x] `.agent-sync.yaml` project marker + auto-registration + git-remote suggestion ([Sync Model §3a](04-sync-model.md))
+- [ ] First cut of the interface skill pack (`agent-sync-create-skill` + the `agent-sync` manager's routing/status flows) and `setup` deploying it — **deferred to M4**: the CLI ergonomics were shaped by the e2e scenarios instead, and the skill pack now ships with the other agent-native pieces
+- [x] Project-scope skill deployment incl. the Cursor overlap/minimum-copy strategy + honest `status` reporting
+- [x] `route` command family; `status --why` provenance output
+- [x] Property-test suite for the resolver invariants
+- [x] e2e scenario 3 (the PRD scenario)
 
-**Exit:** the full precedence ladder works and is explainable; the original requirement §2 example
-is a passing test, exercised against a sandbox project.
+**Exit:** ✅ done. The full precedence ladder works and is explainable; the original requirement §2
+example is a passing test, exercised against a sandbox project.
 
 ## M3 — MCP (v0.3) (≈ 2–3 weeks; the grind)
 
-- [ ] Canonical MCP schema + zod validation; secrets file + `${secret:}`/`${env:}` indirection; `secret` commands
-- [ ] Translators + round-trip property tests for the three dialects
-- [ ] Surgical writers: `.mcp.json`, `~/.claude.json`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `config.toml` (global + project) — with backup-on-write and refuse-on-unparseable
-- [ ] `add mcp` (flags, interactive, `--from <agent>`); capability warnings end-to-end
-- [ ] `import` for MCP + skills (the onboarding scan)
-- [ ] Skill pack: add-mcp reference incl. the secrets protocol (user runs `secret set` themselves)
+- [x] Canonical MCP schema + zod validation; secrets file + `${secret:}`/`${env:}` indirection; `secret` commands
+- [x] Translators + round-trip property tests for the three dialects
+- [x] Surgical writers: `.mcp.json`, `~/.claude.json`, `.cursor/mcp.json`, `~/.cursor/mcp.json`, `config.toml` (global + project) — with backup-on-write and refuse-on-unparseable
+- [x] `add mcp` (flags, interactive, `--from <agent>`); capability warnings end-to-end
+- [x] `import` for MCP + skills (the onboarding scan)
+- [x] Skill pack: add-mcp reference incl. the secrets protocol (user runs `secret set` themselves)
 
 **Exit:** ✅ done. MCP round-trips through all three dialects against fixtures taken from the
 owner's real configs, with byte-exact surgical writes; `import` adopts an existing machine and
