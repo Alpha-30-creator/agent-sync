@@ -56,11 +56,21 @@ Inside your agents, it writes to the places those agents already read:
 ## Setting up the first machine
 
 ```bash
-agent-sync init --remote git@github.com:you/agent-library.git
+agent-sync init --create-remote agent-library
 ```
 
-Creates the library, makes it a git repo, points it at your remote, and registers this
-computer. It detects which agents you have installed.
+Creates the library, makes it a git repo, **creates the GitHub repository for you**, pushes
+the first commit, and registers this computer. It detects which agents you have installed.
+
+The repository is private unless you add `--public`, and it is made under the account your
+GitHub CLI is signed in as — `agent-library` and `you/agent-library` both work. This needs
+[the GitHub CLI](https://cli.github.com) (`gh auth login` once).
+
+If you would rather make the repository yourself, or it already exists, point at it instead:
+
+```bash
+agent-sync init --remote git@github.com:you/agent-library.git
+```
 
 ```bash
 agent-sync import

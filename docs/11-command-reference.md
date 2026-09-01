@@ -40,16 +40,28 @@ Every command uses the same contract, so you can branch on it in scripts.
 
 ```bash
 agent-sync init
+agent-sync init --create-remote agent-library --device macbook
 agent-sync init --remote git@github.com:you/agent-library.git --device macbook
 ```
 
 | Option | Meaning |
 |---|---|
-| `--remote <git-url>` | Git remote to sync the library through. Can be added later with `git remote add` inside the store. |
+| `--create-remote <name>` | Create the repository on GitHub, set it as `origin`, and push. Takes `name` or `owner/name` — not a URL. Needs the GitHub CLI, signed in. |
+| `--public` | Make the created repository public. Only meaningful with `--create-remote`; the default is private. |
+| `--remote <git-url>` | Git remote to sync the library through, for a repository that already exists. Can be added later with `git remote add` inside the store. |
 | `--device <name>` | Name for this machine. Defaults to something derived from the platform. Names are lowercase-kebab. |
 
 Creates `~/.agent-sync/`, makes the store a git repo, and detects which agents are
 installed. Safe to re-run: an existing store is left alone.
+
+`--remote` and `--create-remote` are mutually exclusive. `--create-remote` checks
+everything it needs — the GitHub CLI is installed, you are signed in, the name is valid,
+the repository does not already exist — before writing anything, so a rejected command
+leaves no half-made library behind. If the repository is created but the first push fails,
+the library is kept and pointed at the remote; fix the access and run `agent-sync sync`.
+
+Exit code `1` with `already exists` means the repository is there already: use `--remote`
+to sync through it, or `agent-sync clone` if this machine has no library yet.
 
 ## `clone` — set up an additional machine
 

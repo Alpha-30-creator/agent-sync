@@ -5,7 +5,9 @@
 import { existsSync } from 'node:fs';
 import { stringify } from 'yaml';
 import type { Device, Manifest } from '../../core/manifest/schema.js';
+import { describeRepoNameError, parseRepoName, repoSlug } from '../../core/model/repo.js';
 import { ensureDir, writeFileAtomic } from '../../shell/fs.js';
+import * as forge from '../../shell/github.js';
 import { detectAgents, readMachineFacts } from '../../shell/machine.js';
 import * as git from '../../store/git.js';
 import { layoutFor } from '../../store/layout.js';
@@ -40,9 +42,65 @@ const starterManifest = (): Manifest => ({ version: 1 });
 export interface InitOptions {
   readonly storeOverride?: string;
   readonly remote?: string;
+  /** Repository to create and then sync through: `name` or `owner/name`. */
+  readonly createRemote?: string;
+  readonly visibility: 'private' | 'public';
   readonly deviceName?: string;
   readonly json: boolean;
 }
+
+/**
+ * Everything `--create-remote` needs before the store is touched.
+ *
+ * Creating a repository is the one irreversible thing `init` does, and the checks that
+ * can fail (no gh, not signed in, a name the forge would reject, a repository that is
+ * already there) are all cheap. Running them first means a bad invocation stops before
+ * it has written anything at all.
+ */
+type RemotePlan =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'existing'; readonly url: string }
+  | { readonly kind: 'create'; readonly slug: string };
+
+const planRemote = (options: InitOptions): RemotePlan | { readonly error: string } => {
+  if (options.remote !== undefined && options.createRemote !== undefined) {
+    return {
+      error:
+        '--remote and --create-remote contradict each other; pick one\n' +
+        '  --remote <git-url>      sync through a repository that already exists\n' +
+        '  --create-remote <name>  make the repository first, then sync through it',
+    };
+  }
+  if (options.remote !== undefined) return { kind: 'existing', url: options.remote };
+  if (options.createRemote === undefined) return { kind: 'none' };
+
+  const name = parseRepoName(options.createRemote);
+  if (!name.ok) return { error: describeRepoNameError(name.error) };
+
+  if (!forge.isGhAvailable()) {
+    return {
+      error:
+        'creating a repository needs the GitHub CLI, which was not found on PATH.\n' +
+        '  install it from https://cli.github.com, then run: gh auth login\n' +
+        '  or make the repository yourself and pass: agent-sync init --remote <git-url>',
+    };
+  }
+
+  const login = forge.authenticatedLogin();
+  if (!login.ok) return { error: login.message };
+
+  const slug = repoSlug(name.value, login.value);
+  if (forge.repoExists(slug)) {
+    return {
+      error:
+        `${slug} already exists on GitHub, so there is nothing to create.\n` +
+        '  to sync through it:            agent-sync init --remote <its-git-url>\n' +
+        '  to set this machine up from it: agent-sync clone <its-git-url>',
+    };
+  }
+
+  return { kind: 'create', slug };
+};
 
 const deviceIdFrom = (name: string): string =>
   name
@@ -57,6 +115,12 @@ export const runInit = (options: InitOptions): ExitCode => {
 
   if (!git.isGitAvailable()) {
     failure('git was not found on PATH — agent-sync uses it to sync your library between devices');
+    return EXIT.error;
+  }
+
+  const plan = planRemote(options);
+  if ('error' in plan) {
+    failure(plan.error);
     return EXIT.error;
   }
 
@@ -79,7 +143,34 @@ export const runInit = (options: InitOptions): ExitCode => {
     }
   }
 
-  if (options.remote !== undefined) git.setRemote(layout.store, options.remote);
+  let created: string | null = null;
+  let published = false;
+  if (plan.kind === 'existing') {
+    git.setRemote(layout.store, plan.url);
+  } else if (plan.kind === 'create') {
+    const repo = forge.createRepo(plan.slug, options.visibility);
+    if (!repo.ok) {
+      // The library itself is fine — only publishing failed. Say so, so that the user
+      // does not think the store needs recreating.
+      failure(
+        `could not create ${plan.slug}:\n${repo.message}\n\n` +
+          `your library is intact at ${layout.store}; once the repository exists, run:\n` +
+          '  agent-sync init --remote <its-git-url>',
+      );
+      return EXIT.error;
+    }
+    created = plan.slug;
+    git.setRemote(layout.store, repo.value);
+
+    const pushed = git.push(layout.store);
+    published = pushed.ok;
+    if (!pushed.ok) {
+      warn(
+        `created ${plan.slug} and pointed the library at it, but the first push failed:\n` +
+          `${pushed.output}\n  fix the access above, then run: agent-sync sync`,
+      );
+    }
+  }
 
   const agents = detectAgents(facts);
   const device: Device = {
@@ -95,6 +186,8 @@ export const runInit = (options: InitOptions): ExitCode => {
       device: device.device,
       agents,
       remote: git.remoteUrl(layout.store),
+      repository: created,
+      published,
     });
     return EXIT.ok;
   }
@@ -102,6 +195,13 @@ export const runInit = (options: InitOptions): ExitCode => {
   success(
     alreadyExists ? `store already present at ${layout.store}` : `store created at ${layout.store}`,
   );
+  if (created !== null) {
+    success(
+      published
+        ? `created ${options.visibility} repository ${created} and pushed your library to it`
+        : `created ${options.visibility} repository ${created}`,
+    );
+  }
   success(`device registered as "${device.device}"`);
   if (agents.length === 0) {
     line(
