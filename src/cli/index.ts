@@ -39,18 +39,27 @@ program
   .command('init')
   .description('create the canonical store and register this machine')
   .option('--remote <git-url>', 'git remote to sync the library through')
+  .option(
+    '--create-remote <name>',
+    'create the repository on GitHub, then sync through it: "name" or "owner/name"',
+  )
+  .option('--public', 'make the created repository public (default: private)', false)
   .option('--device <name>', 'name for this machine')
-  .action((options: { remote?: string; device?: string }) => {
-    const g = globals();
-    run(
-      runInit({
-        json: g.json === true,
-        ...(g.store === undefined ? {} : { storeOverride: g.store }),
-        ...(options.remote === undefined ? {} : { remote: options.remote }),
-        ...(options.device === undefined ? {} : { deviceName: options.device }),
-      }),
-    );
-  });
+  .action(
+    (options: { remote?: string; createRemote?: string; public?: boolean; device?: string }) => {
+      const g = globals();
+      run(
+        runInit({
+          json: g.json === true,
+          visibility: options.public === true ? 'public' : 'private',
+          ...(g.store === undefined ? {} : { storeOverride: g.store }),
+          ...(options.remote === undefined ? {} : { remote: options.remote }),
+          ...(options.createRemote === undefined ? {} : { createRemote: options.createRemote }),
+          ...(options.device === undefined ? {} : { deviceName: options.device }),
+        }),
+      );
+    },
+  );
 
 program
   .command('clone')

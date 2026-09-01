@@ -19,8 +19,10 @@ The complete command surface for v1. Conventions first, then each command with i
 ### `agent-sync setup [--hooks] [--remote <git-url>] [--clone <git-url>]`
 Machine onboarding and repair, for humans and agents ([Agent-Native §3](09-agent-native.md)): install/confirm CLI, run `init` or `clone`, probe agents, write `device.yaml`, deploy the interface skill pack into every detected agent, and (with `--hooks`, opt-in) install session-start heartbeat hooks for agents that support them. Idempotent — re-run any time to converge a machine's installation.
 
-### `agent-sync init [--remote <git-url>]`
+### `agent-sync init [--remote <git-url>] [--create-remote <name> [--public]]`
 Create the canonical store (default `~/.agent-sync/store`), `git init`, write starter manifest + store README, optionally set remote. Also writes `~/.agent-sync/device.yaml` after asking for a device name and probing which agents are installed.
+
+`--remote` points at a repository that already exists. `--create-remote` takes a *name* (`agent-library`, or `owner/agent-library`), makes the repository through the GitHub CLI, sets it as `origin`, and pushes the first commit — so first-machine setup is one command and no browser tab ([ADR 0008](decisions/0008-github-cli-for-remote-creation.md)). Repositories are private unless `--public` is passed, and the remote URL follows the protocol `gh` is configured for. The two flags are mutually exclusive. Every reason the creation could fail (no `gh`, not signed in, a name the forge would reject, a repository already there) is checked *before* the store is written, so a rejected invocation leaves nothing behind.
 
 ### `agent-sync clone <git-url>`
 Second-machine onboarding: clone the store, create `device.yaml` (probe agents, name device), then print next steps (`link` your projects, `apply`).
@@ -117,9 +119,10 @@ Manage the device secrets file (values prompted, never echoed, never in argv his
 **First machine:**
 
 ```
-$ agent-sync init --remote git@github.com:abdur/agent-library.git
+$ agent-sync init --create-remote agent-library --device "macbook"
 ✔ store created at ~/.agent-sync/store
-✔ device registered as "macbook-m3" — detected: claude, codex, cursor
+✔ created private repository abdur/agent-library and pushed your library to it
+✔ device registered as "macbook" — detected: claude, codex, cursor
 $ agent-sync import
 found 12 skills, 5 mcp servers, 2 plugins across 3 agents — select to adopt… ✔ adopted 14
 $ agent-sync sync
