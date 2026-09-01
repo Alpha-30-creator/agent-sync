@@ -5,6 +5,12 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     // Builds the CLI once for the whole run; see test/global-setup.ts.
     globalSetup: ['test/global-setup.ts'],
+    // The e2e suites spawn the real CLI, which spawns git: a handful of process
+    // launches per test. Vitest's 5s default is enough on a warm developer machine and
+    // not on a cold Windows runner, where the first test in a file has timed out at
+    // 5.6s while passing everywhere else. Time out on genuine hangs, not on a slow box.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

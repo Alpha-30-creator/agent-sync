@@ -98,6 +98,11 @@ machine without touching `~`.
   `projects["<abs path>"].mcpServers`, not the top-level key.
 - Claude gates `.mcp.json` servers behind `enabledMcpjsonServers` approval arrays.
 
+- **Windows CI is slow enough to trip vitest's 5s default timeout** on the first e2e test in a
+  file — one spawns the CLI which spawns git, and it timed out at 5.6s while passing on every
+  other runner; re-running the same commit went green. Timeouts are now 30s (`vitest.config.ts`).
+  A red Windows job that mentions a timeout rather than an assertion is this, not a regression.
+
 - **Codex has a plugin system** (`[plugins."id@mkt"]` + `[marketplaces.*]` in `config.toml`) —
   the design docs originally said it didn't. `plugin` is a two-agent artifact type (Q9).
 - Third-party tooling already **symlinks** skills from `~/.agents/skills` into `~/.codex/skills`
