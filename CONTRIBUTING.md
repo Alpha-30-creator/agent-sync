@@ -21,6 +21,22 @@ pnpm verify              # typecheck + lint + boundary check + tests
 Node ≥ 20. Everything is cross-platform: macOS, Windows, and Linux are all first-class and all
 run in CI.
 
+### Running your checkout as the real command
+
+To get an `agent-sync` on your PATH that tracks the code you are editing:
+
+```bash
+pnpm build && npm link
+```
+
+`npm link` puts the symlink in npm's own global bin — the same place `npm i -g agent-sync` will
+put the published binary — so switching to the release later is just `npm i -g agent-sync`, and
+`npm rm -g agent-sync` undoes the link. Rebuild (`pnpm build`) after changing anything under
+`src/`: the link points at `dist/`, so an unbuilt change is simply not the code that runs.
+
+Deliberately not `pnpm link --global`: pnpm's global bin directory is frequently absent from PATH
+(`pnpm setup` is what puts it there), which produces a "successful" link and a `command not found`.
+
 ## The rules that matter
 
 - **`src/core/` is pure.** No filesystem, network, clock, randomness, or `process.env` — decisions
