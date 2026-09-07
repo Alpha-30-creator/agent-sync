@@ -100,8 +100,9 @@ The `agent-sync-create-skill` interceptor directs the agent to:
 1. agent-sync new skill sql-migration-review --json
       → scaffolds skills/sql-migration-review/SKILL.md in the STORE, prints its path
 2. write the skill content there (agent authors SKILL.md + any reference files)
-3. agent-sync save skill/sql-migration-review
+3. agent-sync save -m "add skill/sql-migration-review"
       → validate → apply (deploys to routed agents) → commit → push
+      (save is whole-library and takes no artifact argument)
 4. report: where it deployed (from save's JSON output), and that other
    devices pick it up on their next sync/heartbeat
 ```

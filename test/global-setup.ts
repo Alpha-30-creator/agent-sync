@@ -29,6 +29,16 @@ export default function setup(): void {
   execFileSync('node', ['scripts/build-skillpack.mjs'], { cwd: root, stdio: 'inherit' });
 
   /**
+   * Also the executable bit, for the same reason.
+   *
+   * A developer running the suite rebuilds `dist/` in place — and a linked checkout's
+   * global `agent-sync` points straight at the file `tsc` just rewrote. Skipping this
+   * left them with "permission denied" from a command that worked minutes earlier, with
+   * nothing connecting it to having run the tests.
+   */
+  execFileSync('node', ['scripts/chmod-bin.mjs'], { cwd: root, stdio: 'inherit' });
+
+  /**
    * Refuse a guessed git identity for every test process.
    *
    * A CI container cannot invent `user@hostname`, but a developer's machine can — so a

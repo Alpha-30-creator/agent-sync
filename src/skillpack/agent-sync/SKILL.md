@@ -28,9 +28,10 @@ agent-sync status --json
 ```
 
 A matrix of every artifact against every agent. `synced` is converged, `outdated` means
-the library moved on, `drifted` means the deployed copy was edited by hand, `excluded`
-means routing deliberately sends it elsewhere, and `missing` means it should be there and
-is not. An asterisk in the human output means one copy is serving several agents that
+the library moved on, `drifted` means the deployed copy was edited by hand, `conflicted`
+means both sides changed, `collision` means something unmanaged is already sitting in
+that spot, `excluded` means routing deliberately sends it elsewhere, and `missing` means
+it should be there and is not. An asterisk in the human output means one copy is serving several agents that
 read the same directory — that is intended, not a bug.
 
 `agent-sync status --why` explains which rule produced each deployment, which is the

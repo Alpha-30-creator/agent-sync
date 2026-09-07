@@ -18,8 +18,9 @@ drift. **Write it in the library instead — then it is born synced.**
    agent-sync new skill <id> --description "<one line>" --json
    ```
 
-   The id is lowercase, digits, hyphens and underscores only. The command prints the
-   path it created inside the library — that path is where you write.
+   The id is lowercase, digits, hyphens and underscores only. The JSON gives you
+   `path` (the scaffolded `SKILL.md`) and `directory` (where any reference files go).
+   That directory is where you write.
 
 2. **Write the skill there.** Author `SKILL.md` at the path step 1 printed, plus any
    reference files it needs beside it. Do not create anything in `~/.claude/skills`,
@@ -28,12 +29,13 @@ drift. **Write it in the library instead — then it is born synced.**
 3. **Ship it in one transaction.**
 
    ```
-   agent-sync save skill/<id> --json
+   agent-sync save -m "add skill/<id>" --json
    ```
 
-   That validates, deploys to every routed agent, commits, and pushes. If the push fails
-   because the machine is offline, the local work is still applied and committed — say so
-   and move on; the next sync retries.
+   `save` takes no artifact argument — it validates the library, deploys everything that
+   is out of date to every routed agent, commits, and pushes, as one transaction. If the
+   push fails because the machine is offline, the local work is still applied and
+   committed — say so and move on; the next sync retries.
 
 4. **Report what happened.** Read `save`'s JSON and tell the user which agents received
    it, and that their other devices pick it up on the next `agent-sync sync`.
