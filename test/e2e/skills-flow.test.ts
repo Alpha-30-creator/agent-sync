@@ -252,6 +252,31 @@ describe('the first sync of a store that has never been pushed', () => {
   });
 });
 
+/**
+ * The status matrix is the tool's headline output, and its artifact column was a fixed
+ * 28 characters: a longer id ran straight into the first status cell and the rows stopped
+ * lining up. Found while adopting a real library whose ids are long.
+ */
+describe('the status matrix with a long artifact id', () => {
+  it('keeps its columns aligned', () => {
+    const home = join(workspace, 'wide-status');
+    mkdirSync(home, { recursive: true });
+    fabricateAgents(home);
+    run(home, ['init', '--device', 'wide']);
+    run(home, ['new', 'skill', 'a-very-long-skill-identifier-here', '--description', 'Long id']);
+    expect(run(home, ['apply']).code).toBe(0);
+
+    const lines = run(home, ['status']).stdout.split('\n');
+    const header = lines.find((l) => l.startsWith('artifact'));
+    const row = lines.find((l) => l.startsWith('skill/a-very-long-skill-identifier-here'));
+    expect(header).toBeDefined();
+    expect(row).toBeDefined();
+
+    // The first agent column starts at the same offset in the header and in the row.
+    expect((row as string).indexOf('✔')).toBe((header as string).indexOf('claude'));
+  });
+});
+
 describe('scenario 4: removal cleans up every agent', () => {
   it('removes the artifact from the library and from all agents', () => {
     expect(run(deviceTwo, ['rm', 'skill/commit-style']).code).toBe(0);

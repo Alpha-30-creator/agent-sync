@@ -166,7 +166,12 @@ export const runStatus = (options: StatusOptions): ExitCode =>
     // actually cover — otherwise an agent served by a shared copy reads as "excluded".
     const agents = [...new Set(targets.flatMap(coveredAgents))];
 
-    line(`${'artifact'.padEnd(28)}${agents.map((a) => a.padEnd(14)).join('')}`);
+    // The artifact column has to fit the longest id, or a long ref runs into the first
+    // status cell and the matrix stops lining up — which is most of what makes it
+    // readable at a glance.
+    const refColumn = Math.max(28, ...refs.map((ref) => ref.length + 2));
+
+    line(`${'artifact'.padEnd(refColumn)}${agents.map((a) => a.padEnd(14)).join('')}`);
     for (const ref of refs) {
       const cells = agents.map((agent) => {
         const target = targets.find(
@@ -178,17 +183,21 @@ export const runStatus = (options: StatusOptions): ExitCode =>
         const shared = target.deployment.agent !== agent;
         return `${SYMBOL[state] ?? '?'}${shared ? '*' : ''}`.padEnd(14);
       });
-      line(`${ref.padEnd(28)}${cells.join('')}`);
+      line(`${ref.padEnd(refColumn)}${cells.join('')}`);
       if (options.why) {
         const target = targets.find((t) => `${t.deployment.type}/${t.deployment.id}` === ref);
-        if (target !== undefined) info(`${' '.repeat(28)}why: ${explain(target.deployment)}`);
+        if (target !== undefined)
+          info(`${' '.repeat(refColumn)}why: ${explain(target.deployment)}`);
       }
     }
 
     if (targets.some((t) => coveredAgents(t).length > 1)) {
       info('\n* served by a copy written for another agent, which also reads that directory');
     }
-    for (const diagnostic of plan.diagnostics) info(`\nnote: ${diagnostic.message}`);
+    // One blank line before the block, not before every line: a project with a dozen
+    // artifacts was printing a dozen double-spaced notes.
+    if (plan.diagnostics.length > 0) line();
+    for (const diagnostic of plan.diagnostics) info(`note: ${diagnostic.message}`);
     if (plan.operations.length > 0)
       info(`\n${plan.operations.length} change(s) pending — run "agent-sync apply"`);
     return code;

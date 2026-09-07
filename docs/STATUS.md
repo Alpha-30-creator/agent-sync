@@ -94,6 +94,12 @@ machine without touching `~`.
 
 ## Acceptance-phase findings (M3.5, from the AETEA adoption)
 
+**The Mac side of M3.5 is done (2026-09-08).** The owner's AETEA skills are adopted and live: 8
+skills project-scoped to `aetea`, deployed into `.claude/skills` and `.codex/skills` (Cursor is
+served by the `.claude` copy), published to the private `agent-library` remote, and the old
+hand-made symlinks in `.cursor/skills`, `.agents/skills` and the `aetea-refine-skill` alias
+removed. `apply` is idempotent, `doctor` is healthy. Windows is next.
+
 - **Fixed:** `sync` could not complete on a store created by `init --remote`. It pulled before the
   branch had an upstream, which git rejects outright, so the first sync of a new machine died.
   Never caught because the e2e suite publishes with `save`, which does not pull.
@@ -101,12 +107,16 @@ machine without touching `~`.
   content survives (the symlink's target is untouched), but Q10 says third-party symlinks should be
   treated as unmanaged and left alone, or at least reported. Deploying over one is currently
   indistinguishable from deploying into an empty directory.
-- **Open — a skill directory with no `SKILL.md` cannot enter the library**, which is right, but the
-  AETEA skills use a sibling `aetea-shared/reference.md` that five of them link to as
-  `../aetea-shared/reference.md`. Adopting them meant giving that directory a `SKILL.md` first.
-  Worth considering a "companion directory" concept, or at least an error that names the pattern.
-- **Open — `status` column widths break** when an id is long: `skill/aetea-create-refine-skill`
-  overflows its column and pushes the row out of alignment.
+- **Fixed:** `status` column widths broke when an id was long — the artifact column was a fixed 28
+  characters, so `skill/aetea-create-refine-skill` ran into the first status cell and the matrix
+  stopped lining up. The column now sizes to the longest id. Notes were also printing
+  double-spaced, one blank line each.
+- **Fixed:** a skill directory with no `SKILL.md` still cannot enter the library — correct — but
+  the AETEA adoption showed why that matters: five skills link to a sibling
+  `../aetea-shared/reference.md`, so the companion directory had to become a real skill (a
+  `SKILL.md` whose body points at `reference.md`) before any of them could be adopted. It works,
+  and the relative links resolve in every deployed copy on both platforms. A first-class
+  "companion directory" concept is still worth considering.
 
 ## Surprises worth remembering
 
