@@ -44,6 +44,21 @@ export const belongsTo = (name: string, root: string): boolean =>
   name === root || name.startsWith(`${root}.`);
 
 /**
+ * The line ending the document already uses.
+ *
+ * Splitting on `\n` preserves a CRLF document's `\r` at the end of each line, so
+ * existing content survives either way — but anything the splicer *inserts* must match,
+ * or a Windows config quietly becomes mixed-ending and git starts showing phantom
+ * diffs. CRLF only when it actually dominates: a stray `\r\n` in an otherwise LF file
+ * should not flip the whole document.
+ */
+const lineEndingOf = (text: string): string => {
+  const crlf = (text.match(/\r\n/g) ?? []).length;
+  const lf = (text.match(/(?<!\r)\n/g) ?? []).length;
+  return crlf > lf ? '\r\n' : '\n';
+};
+
+/**
  * Remove a table and its subtables. Every other line is preserved exactly,
  * including comments, spacing, and value formatting.
  *
@@ -63,8 +78,8 @@ export const removeTable = (text: string, root: string): string => {
   if (doomed.size === 0) return text;
 
   const kept = lines.filter((_, i) => !doomed.has(i)).join('\n');
-  const trimmed = kept.replace(/\n+$/, '');
-  return trimmed.length === 0 ? '' : `${trimmed}\n`;
+  const trimmed = kept.replace(/(\r?\n)+$/, '');
+  return trimmed.length === 0 ? '' : `${trimmed}${lineEndingOf(text)}`;
 };
 
 /** True when the document already declares the table (or a subtable of it). */
@@ -76,9 +91,12 @@ export const hasTable = (text: string, root: string): boolean =>
  * block is appended, so an upsert followed by a remove restores the original bytes.
  */
 export const upsertTable = (text: string, root: string, block: string): string => {
-  const withoutTable = removeTable(text, root).replace(/\n+$/, '');
-  const body = block.trim();
-  return withoutTable.length === 0 ? `${body}\n` : `${withoutTable}\n\n${body}\n`;
+  const eol = lineEndingOf(text);
+  const withoutTable = removeTable(text, root).replace(/(\r?\n)+$/, '');
+  // The block is normalised to the document's ending too: callers build it with plain
+  // newlines, and inserting those into a CRLF file is the same mixed-ending bug.
+  const body = block.trim().replace(/\r?\n/g, eol);
+  return withoutTable.length === 0 ? `${body}${eol}` : `${withoutTable}${eol}${eol}${body}${eol}`;
 };
 
 /** Quote a TOML key only when it cannot be written bare. */

@@ -21,6 +21,12 @@ pnpm verify              # typecheck + lint + boundary check + tests
 Node ≥ 20. Everything is cross-platform: macOS, Windows, and Linux are all first-class and all
 run in CI.
 
+If you already had a `node_modules` built by pnpm 10, that first install fails with
+`ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`: `package.json` pins pnpm 11, and pnpm 11 will not
+purge a version-10 modules directory without a TTY — which also means it fails inside CI, scripts
+and coding agents. Run it once as `CI=true pnpm install` and the pin takes over from there. The pin
+stays: reproducible installs are worth one documented first step, and a fresh clone never sees it.
+
 ### Running your checkout as the real command
 
 To get an `agent-sync` on your PATH that tracks the code you are editing:

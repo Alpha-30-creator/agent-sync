@@ -555,3 +555,58 @@ describe('selecting what to import', () => {
     expect(refs).toEqual([...new Set(refs)]);
   });
 });
+
+/**
+ * The same server under two names. Found on the second machine during adoption: a server
+ * adopted on one computer and synced to another sits beside the entry the user had added
+ * there by hand, because agent-sync writes its own id and refuses to touch anything it
+ * does not manage. Nothing is lost — but saying nothing makes it look like nothing
+ * happened, and the user is left with one server configured twice.
+ */
+describe('an agent that already reaches the server under its own name', () => {
+  beforeAll(() => {
+    run(['add', 'mcp', 'docs-portal', '--url', 'https://portal.example/mcp']);
+    run(['apply']);
+
+    // What a user gets by adding the same server through the agent's own UI.
+    const path = join(home, '.cursor', 'mcp.json');
+    const document = readJson(path) as unknown as { mcpServers: Record<string, unknown> };
+    document.mcpServers['Portal Docs'] = {
+      name: 'Portal Docs',
+      url: 'https://portal.example/mcp',
+      headers: {},
+    };
+    writeFileSync(path, JSON.stringify(document, null, 2));
+  });
+
+  it('reports the duplicate instead of leaving it unmentioned', () => {
+    const result = run(['apply']);
+    expect(result.stdout).toContain('"Portal Docs"');
+    expect(result.stdout).toContain('has left alone');
+  });
+
+  it('still leaves the entry it does not manage completely untouched', () => {
+    run(['apply']);
+    const entry = (
+      readJson(join(home, '.cursor', 'mcp.json')) as unknown as {
+        mcpServers: Record<string, { name?: string; headers?: unknown }>;
+      }
+    ).mcpServers['Portal Docs'];
+    expect(entry?.name).toBe('Portal Docs');
+    expect(entry?.headers).toEqual({});
+  });
+
+  it('carries the duplicate into --json for the skill pack to act on', () => {
+    const parsed = JSON.parse(run(['--json', 'status']).stdout) as {
+      diagnostics?: { kind: string; ref: string }[];
+    };
+    const found = (parsed.diagnostics ?? []).filter((d) => d.kind === 'duplicate-server');
+    expect(found.map((d) => d.ref)).toContain('mcp/docs-portal');
+  });
+
+  it('says nothing about a server the agent does not already have', () => {
+    run(['add', 'mcp', 'lonely', '--url', 'https://lonely.example/mcp']);
+    const result = run(['apply']);
+    expect(result.stdout).not.toContain('mcp/lonely: cursor already reaches');
+  });
+});

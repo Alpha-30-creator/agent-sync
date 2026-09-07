@@ -44,6 +44,12 @@ export type Diagnostic =
       readonly message: string;
     }
   | {
+      readonly kind: 'duplicate-server';
+      readonly ref: string;
+      readonly agent: AgentId;
+      readonly message: string;
+    }
+  | {
       readonly kind: 'device-masked';
       readonly ref: string;
       readonly agent: AgentId;
@@ -82,6 +88,9 @@ export const severityOf = (diagnostic: Diagnostic): Severity => {
     case 'placement-shared':
     // The user asked for this one explicitly on this device.
     case 'artifact-disabled':
+    // Nothing failed and nothing was touched: the agent's own entry is still there, and
+    // whether it is a leftover is the user's call, not ours.
+    case 'duplicate-server':
       return 'info';
     case 'capability-unsupported':
     case 'device-masked':

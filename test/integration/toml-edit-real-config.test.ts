@@ -66,3 +66,42 @@ describe('splicing a realistic codex config', () => {
     expect(restored).toContain('# The MCP servers below are managed by hand');
   });
 });
+
+/**
+ * The same config with Windows line endings.
+ *
+ * A Windows dogfooding run found every real config on that machine was bare LF, so
+ * CRLF preservation went unproven there. It cannot be proven with a committed fixture
+ * either: `.gitattributes` normalises the whole tree to LF on checkout, so a stored
+ * CRLF file would silently arrive as LF on every machine, including Windows CI. The
+ * only honest way to test it is to build the CRLF content here — the same approach
+ * test/integration/fs.test.ts already takes for hashing.
+ */
+describe('splicing a config that uses CRLF line endings', () => {
+  const crlfFixture = fixture.replace(/\r?\n/g, '\r\n');
+  const crlfBlock = BLOCK.replace(/\r?\n/g, '\r\n');
+  const added = upsertTable(crlfFixture, 'mcp_servers.agent-sync-probe', crlfBlock);
+
+  it('does not convert any pre-existing line to LF', () => {
+    const original = crlfFixture.split('\r\n');
+    // Every line that was there before must still be present with its ending intact.
+    for (const line of original.filter((l) => l.length > 0)) {
+      expect(added).toContain(`${line}\r\n`);
+    }
+  });
+
+  it('leaves no bare LF behind anywhere in the file', () => {
+    expect(added.replace(/\r\n/g, '')).not.toContain('\n');
+  });
+
+  it('still parses, and the spliced table is correct', () => {
+    const parsed = parse(added) as Record<string, Record<string, { command?: string }>>;
+    expect(parsed.mcp_servers?.['agent-sync-probe']?.command).toBe('echo');
+  });
+
+  it('round-trips back to the original when the table is removed', () => {
+    expect(removeTable(added, 'mcp_servers.agent-sync-probe').trimEnd()).toBe(
+      crlfFixture.trimEnd(),
+    );
+  });
+});

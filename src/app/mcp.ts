@@ -9,7 +9,8 @@
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { CAPABILITIES, type McpLocation } from '../adapters/capability-table.js';
-import { hashEntry, readMcpEntry } from '../adapters/mcp.js';
+import { hashEntry, listMcpEntries, readMcpEntry } from '../adapters/mcp.js';
+import { duplicatesOf } from '../core/mcp/duplicate.js';
 import { type McpDefinition, parseMcpDefinition } from '../core/mcp/schema.js';
 import { stableStringify, type TranslateWarning, translate } from '../core/mcp/translate.js';
 import type { AgentId } from '../core/model/types.js';
@@ -137,6 +138,24 @@ export const mcpTargets = (input: McpPlanInput): McpPlan => {
     }
 
     const ref = `mcp/${deployment.id}`;
+
+    // The agent may already reach this server under a name of its own — typically
+    // because it was added by hand here before the library existed. We never touch an
+    // entry we do not manage, so the only correct move is to say so.
+    const alsoNamed = duplicatesOf(translated.value, deployment.id, listMcpEntries(location));
+    if (alsoNamed.length > 0) {
+      const names = alsoNamed.map((name) => `"${name}"`).join(', ');
+      diagnostics.push({
+        kind: 'duplicate-server',
+        ref,
+        agent: deployment.agent,
+        message:
+          `${deployment.agent} already reaches this server as ${names}, which agent-sync does ` +
+          `not manage and has left alone — remove ${alsoNamed.length === 1 ? 'it' : 'them'} ` +
+          `yourself once you are happy`,
+      });
+    }
+
     targets.push({
       deployment,
       path: location.path,
