@@ -133,11 +133,15 @@ describe('scenario 1: a skill created once reaches every agent', () => {
     const result = run(deviceOne, ['--json', 'status']);
     const parsed = JSON.parse(result.stdout) as {
       schemaVersion: number;
-      targets: { agent: string }[];
+      targets: { ref: string; agent: string }[];
       operations: unknown[];
     };
     expect(parsed.schemaVersion).toBe(1);
-    expect(parsed.targets.map((t) => t.agent).sort()).toEqual(['claude', 'codex', 'cursor']);
+    // Scoped to this scenario's own artifact: every store also carries the interface
+    // skill pack agent-sync ships, and this assertion is about sql-review reaching all
+    // three agents, not about how many artifacts happen to exist.
+    const mine = parsed.targets.filter((t) => t.ref === 'skill/sql-review');
+    expect(mine.map((t) => t.agent).sort()).toEqual(['claude', 'codex', 'cursor']);
     expect(parsed.operations).toEqual([]);
   });
 });

@@ -35,7 +35,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/chmod-bin.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/chmod-bin.mjs && node scripts/build-skillpack.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",

@@ -12,6 +12,7 @@ import { readMcpEntry, removeMcpEntry, writeMcpEntry } from '../adapters/mcp.js'
 import {
   adoptSkill,
   deploySkill,
+  skillAdoptPath,
   skillSourcePath,
   skillTargetPath,
   undeploySkill,
@@ -312,7 +313,7 @@ export const apply = (context: Context, options: ApplyOptions): ApplyResult => {
     }
 
     if (options.answer === 'adopt') {
-      const source = skillSourcePath(context.layout.skills, target.deployment.id);
+      const source = skillAdoptPath(context.layout.skills, target.deployment.id);
       adoptSkill({ deployment: target.deployment, source, target: target.path });
       lockfile = record(lockfile, {
         ref: refOf(target.deployment),

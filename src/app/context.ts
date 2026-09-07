@@ -11,6 +11,7 @@ import {
   parseManifest,
   type ValidationIssue,
 } from '../core/manifest/schema.js';
+import { withBuiltInSkills } from '../core/model/builtins.js';
 import type { MachineFacts } from '../core/model/machine.js';
 import { ensureDir, readTextFile, writeFileAtomic } from '../shell/fs.js';
 import { readMachineFacts } from '../shell/machine.js';
@@ -91,7 +92,8 @@ export const loadContext = (
     value: {
       facts,
       layout,
-      manifest: manifest.value,
+      // Resolution sees the shipped skill pack; the file on disk never does.
+      manifest: withBuiltInSkills(manifest.value),
       device: device_,
       lockfile: loadLockfile(lockfilePath, device_.device),
       lockfilePath,

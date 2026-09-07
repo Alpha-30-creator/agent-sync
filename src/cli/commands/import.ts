@@ -155,8 +155,13 @@ export const runImport = (options: ImportOptions): ExitCode => {
   const manifest = (parse(readTextFile(context.layout.manifest) ?? 'version: 1') as Manifest) ?? {
     version: 1,
   };
-  const knownSkills = new Set(Object.keys(manifest.artifacts?.skill ?? {}));
-  const knownMcp = new Set(Object.keys(manifest.artifacts?.mcp ?? {}));
+  // What counts as "already managed" comes from the loaded context, not from `manifest`
+  // above: that one is re-read raw from disk so writes never clobber what is there, and
+  // it therefore lacks the interface skill pack agent-sync ships. Without this, the
+  // shipped skills are reported as unmanaged and offered for adoption — which would copy
+  // agent-sync's own skills into the user's library as if they had written them.
+  const knownSkills = new Set(Object.keys(context.manifest.artifacts?.skill ?? {}));
+  const knownMcp = new Set(Object.keys(context.manifest.artifacts?.mcp ?? {}));
 
   const renames = parseRenames(options.as);
   if (!renames.ok) {

@@ -12,6 +12,7 @@ import { apply } from '../../app/apply.js';
 import { type Context, describeFailure, loadContext } from '../../app/context.js';
 import { mcpSourcePath } from '../../app/mcp.js';
 import { type Manifest, parseManifest } from '../../core/manifest/schema.js';
+import { isBuiltInRef, isBuiltInSkill } from '../../core/model/builtins.js';
 import { ID_PATTERN, parseArtifactRef } from '../../core/model/ids.js';
 import { AGENT_IDS, type AgentId, ARTIFACT_TYPES } from '../../core/model/types.js';
 import { copyTree, ensureDir, readTextFile, removeTree, writeFileAtomic } from '../../shell/fs.js';
@@ -185,12 +186,20 @@ export const runRemove = (options: RemoveOptions): ExitCode => {
   const raw = parse(readTextFile(context.layout.manifest) ?? 'version: 1') as Manifest;
   const { id } = parsed.value;
 
+  // A shipped skill is not in the user's manifest, so the generic "not in the library"
+  // is technically true and useless: `status` lists it as a real artifact, and the user
+  // has no way to guess that removing it is not the operation they want.
+  const builtInAdvice = (ref: string): string =>
+    `${ref} ships with agent-sync and is not part of your library, so there is nothing to remove.\n` +
+    `  to stop deploying it:            agent-sync route ${ref} --remove <agent>\n` +
+    `  to switch it off on this device: agent-sync disable ${ref}`;
+
   // A bare id is only usable when exactly one artifact type declares it.
   const declaringTypes = ARTIFACT_TYPES.filter((type) => raw.artifacts?.[type]?.[id] !== undefined);
   const type = parsed.value.type ?? declaringTypes[0];
 
   if (type === undefined) {
-    failure(`${id} is not in the library`);
+    failure(isBuiltInSkill(id) ? builtInAdvice(`skill/${id}`) : `${id} is not in the library`);
     return EXIT.error;
   }
   if (parsed.value.type === null && declaringTypes.length > 1) {
@@ -200,7 +209,11 @@ export const runRemove = (options: RemoveOptions): ExitCode => {
     return EXIT.error;
   }
   if (raw.artifacts?.[type]?.[id] === undefined) {
-    failure(`${type}/${id} is not in the library`);
+    failure(
+      isBuiltInRef(type, id)
+        ? builtInAdvice(`${type}/${id}`)
+        : `${type}/${id} is not in the library`,
+    );
     return EXIT.error;
   }
 
