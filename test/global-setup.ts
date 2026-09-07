@@ -10,10 +10,23 @@ import { fileURLToPath } from 'node:url';
  * with misleading symptoms (a definition reported missing moments after being written).
  */
 export default function setup(): void {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+
   execFileSync('node', ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
-    cwd: fileURLToPath(new URL('..', import.meta.url)),
+    cwd: root,
     stdio: 'inherit',
   });
+
+  /**
+   * The same assembly step `pnpm build` runs.
+   *
+   * `tsc` alone does not produce a complete `dist/`: the shipped skill pack is copied
+   * and its shared references materialised by a script. Leaving that out here passed
+   * locally purely because an earlier build had left the directory behind, and failed on
+   * a clean checkout — so the bootstrap has to build everything the CLI needs, not just
+   * the TypeScript.
+   */
+  execFileSync('node', ['scripts/build-skillpack.mjs'], { cwd: root, stdio: 'inherit' });
 
   /**
    * Refuse a guessed git identity for every test process.
