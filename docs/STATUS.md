@@ -94,6 +94,37 @@ machine without touching `~`.
 
 ## Acceptance-phase findings (M3.5, from the AETEA adoption)
 
+**MCP is dogfooded (2026-09-08).** `import` adopted Cursor's `Docs by LangChain` as
+`mcp/langchain-docs` and it deployed to all three agents, then published for Windows. The
+byte-exactness claim is now verified on a real config rather than a fixture: the only change to a
+4.3 KB `~/.codex/config.toml` full of comments, env tables and numeric values was the three added
+lines of `[mcp_servers.langchain-docs]`. Claude's 57 KB `~/.claude.json` and Cursor's `mcp.json`
+likewise changed only where they had to, and backups were taken before the first edit. `import`
+also refused all three of the machine's Codex servers with specific reasons (absolute path,
+relative command, needs a `cwd`, switched off) rather than adopting something that could not
+travel.
+
+**Fixed in the same pass, all found by adoption rather than by tests:**
+
+- `import --only mcp/<the agent's own name>` matched nothing, adopted nothing and printed
+  *nothing at all* before exiting 0 — while the listing that told you to rename showed exactly that
+  name. `--only` now accepts either the agent's name or the library id, and an adopt that matches
+  nothing says so and exits 1. The old e2e test passed because it used the post-rename id.
+- `import` run from the home directory listed everything in the global Cursor/Claude config twice,
+  once as global and once as an unregistered project, because in `$HOME` the project-scope path
+  resolves to the same file. Comparison is by real path now, since `HOME` may be `/var/...` while
+  `cwd` reports `/private/var/...`.
+- `doctor` printed Node's DEP0190 security warning on every Windows run: `agentVersion` passed an
+  args array together with `shell: true`, which Node deprecated. Windows uses one command string
+  now. (The agent that reported it believed the call site was clean — it was not.)
+- `link` told you to commit the marker so other devices would link automatically, in a directory
+  that is not a repository. It now says so and gives the exact `link <id>` command for the other
+  machine, and sends you to `apply` rather than `include` when the project already carries
+  artifacts.
+- `package.json` had no `packageManager`, so a fresh machine got whatever corepack defaulted to
+  (10.6.2 on the owner's Windows box, 11.x here). Pinned, and the now-conflicting `version` input
+  dropped from the CI workflow.
+
 **The Mac side of M3.5 is done (2026-09-08).** The owner's AETEA skills are adopted and live: 8
 skills project-scoped to `aetea`, deployed into `.claude/skills` and `.codex/skills` (Cursor is
 served by the `.claude` copy), published to the private `agent-library` remote, and the old

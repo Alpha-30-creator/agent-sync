@@ -22,6 +22,7 @@
     "url": "https://github.com/Alpha-30-creator/agent-sync/issues"
   },
   "type": "module",
+  "packageManager": "pnpm@11.23.0",
   "bin": {
     "agent-sync": "./dist/cli/index.js"
   },

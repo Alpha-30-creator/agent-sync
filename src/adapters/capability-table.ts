@@ -46,7 +46,7 @@ export const CAPABILITIES: Readonly<Record<AgentId, AgentCapabilities>> = {
   claude: {
     id: 'claude',
     label: 'Claude Code',
-    verifiedAgainst: ['2.1.153', '2.1.245'],
+    verifiedAgainst: ['2.1.153', '2.1.245', '2.1.246'],
     supports: { skill: true, mcp: true, plugin: true },
     globalSkillsRoot: (f) => underHome(f, '.claude', 'skills'),
     projectSkillsRoot: (f, dir) => joinPath(f, dir, '.claude', 'skills'),

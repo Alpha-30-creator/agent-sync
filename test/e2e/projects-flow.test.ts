@@ -380,3 +380,36 @@ describe('finding skills that already live inside a project', () => {
     expect(manifest).toContain('unmanaged-project');
   });
 });
+
+/**
+ * `link`'s closing advice. Found on a real workspace that is a directory of repositories
+ * rather than a repository itself: it said to commit the marker so other devices would
+ * link automatically, in a directory where committing anything is impossible — and the
+ * marker is exactly how project identity is meant to travel.
+ */
+describe('what link tells you to do next', () => {
+  it('does not promise the marker will travel from a directory that is not a repository', () => {
+    const plain = join(workspace, 'not-a-repo');
+    mkdirSync(plain, { recursive: true });
+
+    const result = run(['link', 'loose'], plain);
+    expect(result.code, result.stdout).toBe(0);
+    expect(result.stdout).not.toContain('commit it');
+    expect(result.stdout).toContain('not a git repository');
+    // The only way to reach the other machine is by hand, so say the exact command.
+    expect(result.stdout).toContain('agent-sync link loose');
+  });
+
+  it('sends you to apply, not include, when the project already has artifacts', () => {
+    const second = join(workspace, 'second-device-view');
+    mkdirSync(second, { recursive: true });
+    run(['new', 'skill', 'shared-thing', '--description', 'Already in the library'], second);
+    run(['link', 'has-content'], second);
+    run(['include', 'skill/shared-thing'], second);
+
+    // Re-linking is what a second machine does: the includes are already in the library.
+    const result = run(['link', 'has-content'], second);
+    expect(result.stdout).toContain('agent-sync apply');
+    expect(result.stdout).toContain('already belong to this project');
+  });
+});

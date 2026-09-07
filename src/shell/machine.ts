@@ -2,7 +2,7 @@
  * Snapshot of the machine: the facts the pure core needs, read once at the edge so
  * that nothing downstream touches the environment (ADR 0004).
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join } from 'node:path';
@@ -52,13 +52,22 @@ export const detectAgents = (facts: MachineFacts): readonly AgentId[] =>
 
 /** Version reported by an agent's CLI, for comparison against the capability table. */
 export const agentVersion = (agent: AgentId): string | null => {
+  const bin = FOOTPRINT[agent].bin;
+  const options = {
+    encoding: 'utf8' as const,
+    stdio: ['ignore', 'pipe', 'ignore'] as ('ignore' | 'pipe')[],
+    timeout: 10_000,
+  };
   try {
-    const output = execFileSync(FOOTPRINT[agent].bin, ['--version'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 10_000,
-      shell: platform() === 'win32',
-    });
+    // Windows needs a shell, because agents install as `.cmd`/`.ps1` shims that cannot
+    // be executed directly. Node deprecated passing an *args array* alongside
+    // `shell: true` (DEP0190) and prints a security warning on every call — which showed
+    // up in `doctor` output on Windows, where cursor-agent is a `.ps1`. One command
+    // string is the supported form.
+    const output =
+      platform() === 'win32'
+        ? execSync(`${bin} --version`, options)
+        : execFileSync(bin, ['--version'], options);
     return output.trim().split('\n')[0] ?? null;
   } catch {
     return null;

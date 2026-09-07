@@ -9,7 +9,7 @@
  * credential-looking values as secrets to keep out of git, and by default it reports
  * rather than adopts, so you see the list before anything is written.
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parse, stringify } from 'yaml';
 import { CAPABILITIES, type McpLocation } from '../../adapters/capability-table.js';
@@ -71,6 +71,24 @@ const ABSOLUTE_PATH = /(^|["\s=])(\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\)/;
  *
  * These are hints, not certainties, which is why import reports before it adopts.
  */
+/**
+ * Whether two locations are the same file or directory.
+ *
+ * String equality is not enough: `HOME` may be a symlinked path (`/var/...` on macOS)
+ * while `process.cwd()` reports the resolved one (`/private/var/...`), so the global
+ * config and the "project" config in the home directory compare unequal while being the
+ * same bytes on disk.
+ */
+const samePath = (a: string | null | undefined, b: string | null | undefined): boolean => {
+  if (a === null || a === undefined || b === null || b === undefined) return false;
+  if (a === b) return true;
+  try {
+    return realpathSync(a) === realpathSync(b);
+  } catch {
+    return false;
+  }
+};
+
 const machineSpecificReasons = (entry: Readonly<Record<string, unknown>>): readonly string[] => {
   const reasons: string[] = [];
   const command = typeof entry.command === 'string' ? entry.command : '';
@@ -218,31 +236,37 @@ export const runImport = (options: ImportOptions): ExitCode => {
 
   for (const agent of agents) {
     const capabilities = CAPABILITIES[agent];
-    scanSkills(agent, capabilities.globalSkillsRoot(context.facts), undefined);
+    const globalSkills = capabilities.globalSkillsRoot(context.facts);
+    scanSkills(agent, globalSkills, undefined);
 
     for (const place of places) {
-      scanSkills(
-        agent,
-        capabilities.projectSkillsRoot(context.facts, place.dir),
-        place.project,
-        place.unlinked,
-      );
+      const projectSkills = capabilities.projectSkillsRoot(context.facts, place.dir);
+      // Standing in the home directory makes the project-scope path resolve to the very
+      // same directory as the global one, and the same artifact would be reported twice
+      // — once as global, once as an unregistered project.
+      if (samePath(projectSkills, globalSkills)) continue;
+      scanSkills(agent, projectSkills, place.project, place.unlinked);
     }
 
     // MCP servers declared in this agent's configuration — globally, and inside each
     // project we are looking at. Project MCP files are where credentials tend to sit in
     // plain text, so leaving them undiscovered would miss the case that matters most.
+    const globalMcp = capabilities.globalMcp(context.facts);
     const mcpPlaces: {
       location: McpLocation | null;
       project: string | undefined;
       unlinked: boolean;
     }[] = [
-      { location: capabilities.globalMcp(context.facts), project: undefined, unlinked: false },
-      ...places.map((place) => ({
-        location: capabilities.projectMcp(context.facts, place.dir),
-        project: place.project,
-        unlinked: place.unlinked,
-      })),
+      { location: globalMcp, project: undefined, unlinked: false },
+      ...places
+        .map((place) => ({
+          location: capabilities.projectMcp(context.facts, place.dir),
+          project: place.project,
+          unlinked: place.unlinked,
+        }))
+        // Same reason as the skills above: in the home directory the project config file
+        // and the global one are the same file.
+        .filter((place) => !samePath(place.location?.path, globalMcp?.path)),
     ];
 
     for (const place of mcpPlaces) {
@@ -320,8 +344,17 @@ export const runImport = (options: ImportOptions): ExitCode => {
     // global one, which is not what anyone means.
     if (candidate.notes.some((note) => note.includes('not a registered project yet'))) return false;
     if (!ID_PATTERN.test(candidate.id)) return false;
-    // An explicit selection means exactly that, machine-specific or not.
-    if (only.size > 0) return only.has(`${candidate.type}/${candidate.id}`);
+    // An explicit selection means exactly that, machine-specific or not. It matches the
+    // agent's own name as well as the library id: `--as` is how you fix an unusable id,
+    // and the listing that told you to rename showed the original — so `--only` with
+    // that original name has to work, or the two flags contradict each other.
+    if (only.size > 0) {
+      return (
+        only.has(`${candidate.type}/${candidate.id}`) ||
+        (candidate.originalId !== undefined &&
+          only.has(`${candidate.type}/${candidate.originalId}`))
+      );
+    }
     return options.includeMachineSpecific || !candidate.machineSpecific;
   });
 
@@ -456,6 +489,27 @@ export const runImport = (options: ImportOptions): ExitCode => {
       secretsStored: Object.keys(secretsToStore),
       skipped: candidates.filter((c) => !adoptable.includes(c)).map((c) => `${c.type}/${c.id}`),
     });
+    return EXIT.ok;
+  }
+
+  if (adoptedRefs.length === 0) {
+    // Reporting nothing at all reads as success. Say what happened, and if a selection
+    // matched none of the candidates, say which part of it missed.
+    const refsFor = (c: ImportCandidate): readonly string[] =>
+      c.originalId === undefined
+        ? [`${c.type}/${c.id}`]
+        : [`${c.type}/${c.id}`, `${c.type}/${c.originalId}`];
+    const available = new Set(candidates.flatMap(refsFor));
+    const unmatched = [...only].filter((ref) => !available.has(ref));
+
+    if (unmatched.length > 0) {
+      failure(
+        `nothing was adopted — ${unmatched.map((r) => `"${r}"`).join(', ')} matched nothing.\n` +
+          `  found here: ${[...new Set(candidates.map((c) => `${c.type}/${c.id}`))].join(', ')}`,
+      );
+      return EXIT.error;
+    }
+    warn('nothing was adopted — everything selected was skipped for the reasons listed above');
     return EXIT.ok;
   }
 

@@ -516,3 +516,42 @@ describe('MCP servers configured inside a project', () => {
     expect(definition).not.toContain('github_pat_');
   });
 });
+
+/**
+ * Selecting what to adopt. Found while onboarding a real machine: the listing tells you
+ * to re-run with `--as "<agent's name>=<id>"`, so the obvious next command pairs that
+ * with `--only mcp/<agent's name>` — which matched nothing, adopted nothing, and printed
+ * nothing at all on its way to exit 0.
+ */
+describe('selecting what to import', () => {
+  beforeAll(() => {
+    const path = join(home, '.cursor', 'mcp.json');
+    const document = readJson(path) as unknown as { mcpServers: Record<string, unknown> };
+    document.mcpServers['Vector DB'] = { url: 'https://vector.example/mcp' };
+    writeFileSync(path, JSON.stringify(document, null, 2));
+  });
+
+  it('accepts the name the agent uses, not only the renamed id', () => {
+    const result = JSON.parse(
+      run(['--json', 'import', '--adopt', '--as', 'Vector DB=vector-db', '--only', 'mcp/Vector DB'])
+        .stdout,
+    ) as { adopted: string[] };
+    expect(result.adopted).toEqual(['mcp/vector-db']);
+  });
+
+  it('reports a selection that matched nothing rather than exiting silently', () => {
+    const result = run(['import', '--adopt', '--only', 'mcp/not-here']);
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain('matched nothing');
+  });
+
+  it('lists an artifact once when run from the home directory', () => {
+    // In $HOME the project-scoped config path resolves to the global one, so the same
+    // file was scanned twice and every server in it reported as a duplicate.
+    const parsed = JSON.parse(run(['--json', 'import']).stdout) as {
+      candidates: { type: string; id: string }[];
+    };
+    const refs = parsed.candidates.map((c) => `${c.type}/${c.id}`);
+    expect(refs).toEqual([...new Set(refs)]);
+  });
+});

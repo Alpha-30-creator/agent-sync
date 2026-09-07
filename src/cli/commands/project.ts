@@ -92,8 +92,25 @@ export const runLink = (options: LinkOptions): ExitCode => {
     return EXIT.ok;
   }
   success(`linked ${dir} as project "${id}"`);
-  line(`  wrote ${marker} — commit it, and other devices will link this project automatically`);
-  info('next: agent-sync include skill/<id>');
+  if (remote === null) {
+    // No git remote means the marker has nowhere to travel: telling someone to commit a
+    // file in a directory that is not a repository is advice they cannot take, and the
+    // marker is the mechanism project identity is supposed to propagate through.
+    line(`  wrote ${marker}`);
+    info(`  this directory is not a git repository, so the marker cannot travel with it —`);
+    info(`  on your other devices run "agent-sync link ${id}" there, with this exact id`);
+  } else {
+    line(`  wrote ${marker} — commit it, and other devices will link this project automatically`);
+  }
+
+  // A project the library already knows about arrives with its artifacts already chosen;
+  // sending the user to `include` then reads as though nothing came across.
+  const included = entry.include ?? [];
+  info(
+    included.length > 0
+      ? `next: agent-sync apply — ${included.length} artifact(s) already belong to this project`
+      : 'next: agent-sync include skill/<id>',
+  );
   return EXIT.ok;
 };
 
