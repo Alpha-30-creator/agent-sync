@@ -36,7 +36,12 @@ export const runSync = (options: SyncOptions): ExitCode => {
   }
   const committed = commit.kind === 'committed';
   const hasRemote = git.remoteUrl(store) !== null;
-  const pulled = hasRemote ? git.pull(store) : { ok: true, output: 'no remote configured' };
+  // A store set up with `init --remote` has an origin but no upstream branch until its
+  // first push. Pulling then fails with "no tracking information", which would strand
+  // the very first sync on a new machine — and nothing can have been published yet, so
+  // there is genuinely nothing to pull. The push below sets the upstream.
+  const canPull = hasRemote && git.hasUpstream(store);
+  const pulled = canPull ? git.pull(store) : { ok: true, output: 'nothing to pull yet' };
 
   if (!pulled.ok) {
     // Conflicts stop the pipeline with the artifact-level context a human needs.
@@ -62,7 +67,7 @@ export const runSync = (options: SyncOptions): ExitCode => {
   if (options.json) {
     emitJson('sync', true, {
       committed,
-      pulled: hasRemote,
+      pulled: canPull,
       pushed,
       written: result.written,
       removed: result.removed,

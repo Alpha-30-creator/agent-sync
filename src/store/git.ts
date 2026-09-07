@@ -76,6 +76,17 @@ export const setRemote = (cwd: string, url: string): GitResult =>
     ? git(cwd, ['remote', 'add', 'origin', url])
     : git(cwd, ['remote', 'set-url', 'origin', url]);
 
+/**
+ * Whether the current branch tracks a remote branch.
+ *
+ * False for a store created by `init --remote`, which has an origin but has never
+ * pushed. `git pull --rebase` fails outright in that state ("no tracking information"),
+ * so the caller has to know the difference between "nothing to pull yet" and "the pull
+ * failed".
+ */
+export const hasUpstream = (cwd: string): boolean =>
+  git(cwd, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']).ok;
+
 export const clone = (url: string, destination: string): GitResult =>
   git(process.cwd(), ['clone', '-q', url, destination]);
 

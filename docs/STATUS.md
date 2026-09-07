@@ -92,6 +92,22 @@ config shapes captured in `docs/02-agent-landscape.md` §5a/§5b, and keep the r
 (`--store` + a sandbox `HOME`) working so the full tool can be exercised against a realistic
 machine without touching `~`.
 
+## Acceptance-phase findings (M3.5, from the AETEA adoption)
+
+- **Fixed:** `sync` could not complete on a store created by `init --remote`. It pulled before the
+  branch had an upstream, which git rejects outright, so the first sync of a new machine died.
+  Never caught because the e2e suite publishes with `save`, which does not pull.
+- **Open — project apply silently replaces an unmanaged symlink** with a real directory. The
+  content survives (the symlink's target is untouched), but Q10 says third-party symlinks should be
+  treated as unmanaged and left alone, or at least reported. Deploying over one is currently
+  indistinguishable from deploying into an empty directory.
+- **Open — a skill directory with no `SKILL.md` cannot enter the library**, which is right, but the
+  AETEA skills use a sibling `aetea-shared/reference.md` that five of them link to as
+  `../aetea-shared/reference.md`. Adopting them meant giving that directory a `SKILL.md` first.
+  Worth considering a "companion directory" concept, or at least an error that names the pattern.
+- **Open — `status` column widths break** when an id is long: `skill/aetea-create-refine-skill`
+  overflows its column and pushes the row out of alignment.
+
 ## Surprises worth remembering
 
 - **Codex's own `codex mcp add` corrupts unrelated config** (drops keys, reorders env tables,

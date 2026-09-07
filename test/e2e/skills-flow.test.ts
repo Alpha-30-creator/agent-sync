@@ -222,6 +222,36 @@ describe('scenario 3: a second device reaches parity', () => {
   });
 });
 
+/**
+ * `save` publishes without pulling, so a store's first push always went through a code
+ * path that never needed an upstream branch. `sync` pulls first, and on a store created
+ * by `init --remote` — origin set, nothing pushed yet — that failed with git's "no
+ * tracking information", stranding the first sync on a fresh machine.
+ */
+describe('the first sync of a store that has never been pushed', () => {
+  it('publishes instead of failing on the missing upstream', () => {
+    const home = join(workspace, 'first-sync');
+    const bare = join(workspace, 'first-sync-remote.git');
+    mkdirSync(home, { recursive: true });
+    fabricateAgents(home);
+    execFileSync('git', ['init', '--bare', '-q', '-b', 'main', bare]);
+
+    expect(run(home, ['init', '--remote', bare, '--device', 'fresh']).code).toBe(0);
+    run(home, ['new', 'skill', 'first-sync-skill', '--description', 'proves the first sync']);
+
+    const synced = run(home, ['sync']);
+    expect(synced.code, synced.stdout).toBe(0);
+    expect(synced.stdout).toContain('pushed to the remote');
+
+    // The library really reached the remote, so another device could clone it.
+    const listed = execFileSync('git', ['ls-tree', '-r', '--name-only', 'main'], {
+      cwd: bare,
+      encoding: 'utf8',
+    });
+    expect(listed).toContain('skills/first-sync-skill/SKILL.md');
+  });
+});
+
 describe('scenario 4: removal cleans up every agent', () => {
   it('removes the artifact from the library and from all agents', () => {
     expect(run(deviceTwo, ['rm', 'skill/commit-style']).code).toBe(0);
