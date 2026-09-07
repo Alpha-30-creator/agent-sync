@@ -73,9 +73,14 @@ once instead of migrating a real setup repeatedly.
 - [ ] `sync` to the Windows machine; confirm parity, then run both agents for real work for a week.
 - [ ] Log every friction point; fix ergonomics before v1.0 rather than after.
 
-## M4 — Plugins + polish → public v1.0 (≈ 2 weeks)
+## M4 — Polish → public v1.0 (≈ 2 weeks)
 
-- [ ] Plugin declarations; Claude reconciliation (CLI-first, settings-edit fallback); `n/a` semantics in status
+Plugins were cut from v1 on 2026-09-08: getting the tool published matters more than a third
+artifact type, nothing the owner uses daily depends on it, and it is the one remaining area that
+would need fresh research in two dialects (Q9) before a line of it could be written. It moves to
+post-v1, where demand can decide its priority. `plugin` stays in the schema and the type union —
+removing it would churn the core for no gain — and `status` reports it as `n/a`.
+
 - [ ] `heartbeat` + hook installers for Claude Code and Cursor (`setup --hooks`); `INSTALL.md` agent runbook + paste-line install tested end-to-end from all three agents
 - [ ] `doctor` full checks; `edit`, `mv`; `--json` outputs; smoke checklist doc
 - [ ] OSS packaging: LICENSE (MIT), CONTRIBUTING.md, issue templates, README quickstart rewritten from real usage, changesets release pipeline, npm publish with provenance
@@ -84,6 +89,10 @@ once instead of migrating a real setup repeatedly.
 **Exit:** `npm i -g agent-sync` works for a stranger; announce.
 
 ## Post-v1 candidates (unordered, demand-driven)
+
+- **Plugin declarations** (cut from v1, see M4): Claude reconciliation (CLI-first, settings-edit
+  fallback), Codex's `[plugins."id@mkt"]` + `[marketplaces.*]`, and `n/a` → real state in `status`.
+  Needs Q9 answered first.
 
 - **Rules/memory artifact type:** `AGENTS.md` / `CLAUDE.md` / `.cursor/rules` as a fourth artifact with per-agent projection — most-requested-likely feature; excluded from v1 to keep scope honest.
 - **Plugin skill extraction:** project skills bundled inside Claude plugins into Codex/Cursor.
@@ -98,12 +107,12 @@ once instead of migrating a real setup repeatedly.
 |---|----------|----------|--------------|
 | Q1 | Cursor global skills: exact path & discovery semantics in current release | M0 | Table-driven; degrade to per-project deployment if absent |
 | Q2 | Codex project-scope `config.toml`: trust-gating behavior and whether project MCP is respected | M0 | Verify; if unreliable, project-scope MCP for Codex becomes a capability gap (warn) |
-| Q3 | Claude plugin install non-interactively: CLI flags vs settings-write-and-let-fetch | M4 | CLI-first |
+| Q3 | Claude plugin install non-interactively: CLI flags vs settings-write-and-let-fetch | ~~M4~~ post-v1 | CLI-first |
 | Q4 | Should `sync` auto-commit store changes, or require explicit `agent-sync commit` for users who want curated history? | M1 | Auto-commit with generated messages; `--no-commit` escape hatch |
 | Q5 | Manifest ergonomics: is the YAML nesting depth acceptable in practice, or does v1.1 need a flatter rule syntax? | dogfood | Decide from real usage, not speculation |
 | ~~Q6~~ | ~~Windows: any agent storing per-user config under `%APPDATA%`?~~ | ~~M0~~ | **Resolved 2026-08-25:** no — all three use `%USERPROFILE%` dot-dirs identically to macOS. `%APPDATA%\Cursor` is Electron app state, not agent config ([landscape §5a](02-agent-landscape.md)) |
 | Q7 | Cursor hooks: are the v1.7+ hook events stable/rich enough for the heartbeat, or is Cursor tier-0-only at launch? | M4 | Verify during M4; Claude Code hooks are the reference implementation either way |
-| Q9 | Codex plugins: how do `[plugins."id@mkt"]` + `[marketplaces.*]` behave (install path, non-interactive enable, marketplace `source_type` values)? Can one plugin declaration target both Claude and Codex, or do they need per-agent sources? | M4 | Model `plugin` as a two-agent type with per-agent source fields; verify before building the adapter |
+| Q9 | *(post-v1, with plugins)* Codex plugins: how do `[plugins."id@mkt"]` + `[marketplaces.*]` behave (install path, non-interactive enable, marketplace `source_type` values)? Can one plugin declaration target both Claude and Codex, or do they need per-agent sources? | M4 | Model `plugin` as a two-agent type with per-agent source fields; verify before building the adapter |
 | Q10 | Should `~/.agents/skills` (shared convention seen in the wild, read by Cursor) be a first-class placement target that satisfies several agents at once? | M2 | Probably yes for project scope — it is exactly the minimum-copy strategy; verify which agents read it |
 | Q11 | Should an opt-in flag let `apply` record Claude's `enabledMcpjsonServers` approval for project MCP servers? | dogfood (M3.5) | Default stays "never"; add the flag only if the prompt proves genuinely annoying in real use |
 | Q8 | Skill-pack activation quality: do the three intent-split skills (`agent-sync-create-skill`, `agent-sync-add-mcp`, `agent-sync`) trigger reliably in all three agents — especially the two interceptors, which must beat the agent's native instinct? | dogfood (M2) | Three intent-based skills ([Agent-Native §4](09-agent-native.md)); tune descriptions on observed misses, merge only if redundant |

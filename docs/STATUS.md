@@ -75,8 +75,11 @@ device in one command ([ADR 0008](decisions/0008-github-cli-for-remote-creation.
 GitHub CLI, which is installed and signed in as `Alpha-30-creator` on this Mac. Note that `gh`
 here is configured for **https**, so the remote it writes is the https URL, not ssh.
 
-Then **M4**: plugin declarations (Claude *and* Codex — see Q9), the agent-native pieces (the three
-interface skills, `INSTALL.md`, `setup`, heartbeat hooks), and OSS packaging for v1.0.
+Then **M4**: the agent-native pieces (the three interface skills, `INSTALL.md`, `setup`, heartbeat
+hooks) and OSS packaging for v1.0. **Plugins were cut from v1 on 2026-09-08** — publishing matters
+more, nothing in daily use depends on them, and they are the one area still needing fresh research
+in two dialects (Q9). They are the first post-v1 candidate; the `plugin` type stays in the schema
+and reports `n/a`.
 
 Carried into M4, decided in M3: agent-sync does **not** write Claude's `enabledMcpjsonServers`
 approval array. Writing `.mcp.json` leaves a project server pending Claude's own approval prompt,
@@ -93,6 +96,12 @@ config shapes captured in `docs/02-agent-landscape.md` §5a/§5b, and keep the r
 machine without touching `~`.
 
 ## Acceptance-phase findings (M3.5, from the AETEA adoption)
+
+**Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `aetea-debug` was detected on the
+next `apply`, which refused with exit 3 and named both ways out; `status` showed `⚠ drifted` for
+claude and cursor and `✔ synced` for codex, which had not been touched. The edit and the library
+copy were both intact afterwards, and `--overwrite` restored the deployed file byte-for-byte.
+Non-negotiable #3 verified outside the test suite.
 
 **MCP is dogfooded (2026-09-08).** `import` adopted Cursor's `Docs by LangChain` as
 `mcp/langchain-docs` and it deployed to all three agents, then published for Windows. The
