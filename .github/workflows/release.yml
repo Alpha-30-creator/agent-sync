@@ -48,15 +48,21 @@ jobs:
 
       # The published package must contain the skill pack: without it `setup` deploys
       # nothing, and the failure would only show up on a user's machine.
+      # Inspect the actual tarball rather than npm's --json report: the report's shape
+      # has changed between npm versions, and this workflow upgrades npm on every run.
+      # Listing the archive is stable and checks the artifact that really ships.
       - name: Check the skill pack is in the tarball
         run: |
-          npm pack --dry-run --json > /tmp/pack.json
-          node -e "
-            const files = require('/tmp/pack.json')[0].files.map(f => f.path);
-            const skills = files.filter(f => f.startsWith('dist/skillpack/'));
-            if (skills.length === 0) { console.error('no skillpack in the tarball'); process.exit(1); }
-            console.log('skillpack files:', skills.length);
-          "
+          npm pack --silent
+          tarball=$(ls ./*.tgz)
+          count=$(tar -tzf "$tarball" | grep -c '^package/dist/skillpack/.*SKILL\.md$' || true)
+          echo "SKILL.md files in the tarball: $count"
+          if [ "$count" -lt 3 ]; then
+            echo "the interface skill pack is missing from the tarball — setup would deploy nothing"
+            tar -tzf "$tarball" | head -20
+            exit 1
+          fi
+          rm -f "$tarball"
 
       # No token. Authentication is OIDC against the trusted publisher configured for
       # this package on npmjs.com, which must name this repository and this workflow
