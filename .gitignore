@@ -7,3 +7,11 @@ coverage/
 *.log
 .env
 .env.*
+
+# Skills agent-sync deploys into this repo for whoever is working on it. They are
+# project-scoped artifacts from a personal library, not part of the project — and this
+# repository is public, so they must never be committed here.
+.claude/skills/
+.codex/skills/
+.cursor/skills/
+.agents/skills/

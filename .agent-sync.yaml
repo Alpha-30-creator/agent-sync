@@ -1,0 +1,3 @@
+# agent-sync project marker — safe to commit.
+# It carries this project's identity between machines; it contains no paths and no secrets.
+project: agent-sync

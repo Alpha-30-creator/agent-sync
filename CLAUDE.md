@@ -36,27 +36,37 @@ pnpm test:unit        # core unit tests only (fast loop)
 pnpm typecheck        # tsc --noEmit
 pnpm lint             # biome check
 pnpm check:deps       # dependency-cruiser: enforces the core purity boundary
-pnpm build            # tsc → dist/
+pnpm build            # tsc → dist/ (also assembles the shipped skill pack)
 pnpm verify           # typecheck + lint + check:deps + test  (run before every commit)
 ```
+
+## How the work is done
+
+The detailed workflow — planning, the test discipline, the review checklist, and landing a
+change — lives in four skills that agent-sync deploys into this repo:
+
+`agent-sync-dev-plan` → `agent-sync-dev-implement` → `agent-sync-dev-review` → `agent-sync-dev-ship`
+
+Each names the next at the end. Invoke with `/name` in Cursor or Claude Code, `$name` in Codex.
+If they are not present, run `agent-sync apply` from the repo root.
 
 ## Conventions
 
 - **Commits:** conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`),
-  imperative mood, scoped where useful (`feat(resolver): …`). Small and focused. No trailers.
+  imperative mood, scoped where useful (`feat(resolver): …`). Small and focused: one commit, one
+  change, and a message that describes what is actually in it. No trailers.
 - **TypeScript:** ESM only, `strict`, `readonly` types in core, discriminated unions over booleans,
   `Result`-style returns inside core (throwing is a shell-only privilege).
 - **Tests:** every core module gets table-driven unit tests; invariants from
   `docs/04-sync-model.md §9` get property tests. New behavior lands with its test in the same
-  commit. A bug fix starts with the failing fixture.
+  commit. A bug fix starts with the failing fixture — then revert the fix and confirm the test
+  fails, or it is not a regression test.
 - **Docs:** when code changes a documented behavior, update the doc in the same commit. Update
   `docs/STATUS.md` at the end of every work session.
 
 ## Git & GitHub
 
-- **All GitHub operations go through `gh`**, authenticated as `Alpha-30-creator` (repo create,
-  issues, PRs, releases, workflow runs). Never use the web UI flow or a different account.
-- **Commit identity is repo-local** and already configured:
-  `Muhammad Abdur Rahman Saad <63783742+Alpha-30-creator@users.noreply.github.com>` — the GitHub
-  noreply address, so commits link to the account without exposing a personal email.
+- **All GitHub operations go through `gh`** (repo create, issues, PRs, releases, workflow runs).
+  Never the web UI.
+- Commit identity is configured repo-locally and already set up; don't change it.
 - Branch off `main` for anything non-trivial; `main` stays green.
