@@ -123,6 +123,30 @@ archive now. Nothing was published under the failed tag.
 work on the code again, `npm rm -g @abdur-codes/agent-sync` and `pnpm build && npm link` from the
 repo.
 
+## Both machines run the published package (2026-09-08)
+
+Windows installed `@abdur-codes/agent-sync@0.1.0` from npm and passes: the `.cmd` shim works from a
+normal shell (the earlier junction problem was the cross-drive dev link, never the shim), `doctor`
+is healthy, and all twelve artifacts are synced across all three agents. The reverse round-trip is
+confirmed from that side too — the marker removal made on the Mac is gone from the store and both
+deployed copies there.
+
+Three findings from that run, all now addressed:
+
+1. **`doctor` said "everything looks healthy" with nine artifacts undeployed.** It checked git, the
+   store and the agents but never convergence — the one question it is run to answer, and the one
+   INSTALL.md tells an agent to trust. It reports pending work now.
+2. **Installing a new version deploys nothing** until `setup`/`apply`/`sync`. That is correct — an
+   npm install must not write to agent configuration — but it was undocumented, so the upgrade path
+   is now written down in [getting started](../getting-started.md).
+3. **Removing a dev link after its directory is already gone orphans the shims**, and the next
+   global install fails with `EEXIST`. A contributor-path hazard; recorded in `CONTRIBUTING.md`.
+
+A fourth was a stale checkout rather than a defect: the four `agent-sync-dev-*` skills did not
+deploy on Windows because that clone predates the committed `.agent-sync.yaml` marker. The marker
+is the mechanism that carries project identity between machines; a project's `remote:` field is
+only a linking *hint* and never auto-links.
+
 ## Acceptance-phase findings (M3.5, from adopting a real machine)
 
 **Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `a-project-debug` was detected on the
