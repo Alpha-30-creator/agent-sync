@@ -24,6 +24,10 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing needs npm >= 11.5.1, and Node 24 ships an older 11.x. Without
+      # this the publish fails on OIDC rather than falling back to anything.
+      - run: npm install -g npm@latest
+
       - run: pnpm install --frozen-lockfile
 
       # The full gate again, on the exact commit being published. CI having been green on
@@ -54,6 +58,9 @@ jobs:
             console.log('skillpack files:', skills.length);
           "
 
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # No token. Authentication is OIDC against the trusted publisher configured for
+      # this package on npmjs.com, which must name this repository and this workflow
+      # file. Provenance is attached automatically under trusted publishing, so
+      # --provenance is not passed; --access public is still required the first time a
+      # package is published.
+      - run: npm publish --access public
