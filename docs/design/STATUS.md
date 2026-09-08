@@ -95,6 +95,34 @@ config shapes captured in `docs/02-agent-landscape.md` §5a/§5b, and keep the r
 (`--store` + a sandbox `HOME`) working so the full tool can be exercised against a realistic
 machine without touching `~`.
 
+## v0.1.0 is published (2026-09-08)
+
+Live on npm as **`@abdur-codes/agent-sync`**, released from CI over OIDC with a SLSA provenance
+attestation and no token stored anywhere. The Mac now runs the published package rather than a
+linked checkout, and it drives the existing library unchanged.
+
+Three packaging faults were found in the space of one release attempt, all of them invisible to a
+green CI run:
+
+1. **npm refuses the name `agent-sync`** — blocked as too similar to `agentsync`, an existing
+   package in the same niche. `npm view` returning 404 means *not published*, not *registrable*;
+   the similarity check only runs at publish time. Hence the scope ([ADR 0009](decisions/0009-scoped-npm-package.md)).
+   The command is still `agent-sync`.
+2. **npm stripped the `bin` entry** because of a leading `./` in its path — the one field that
+   decides whether installing gives you a command at all.
+3. **`smol-toml` was a devDependency while shipped code imported it**, so every install crashed on
+   its first command. Found by installing the published bootstrap into an empty directory. The
+   suites could not have caught it: they run where dev dependencies exist. There is now a test that
+   reads the built output and requires every bare import to be a declared runtime dependency.
+
+The release workflow also failed once on its own tarball check, which read `npm pack --json` —
+whose shape differs across npm versions, and the workflow upgrades npm on every run. It lists the
+archive now. Nothing was published under the failed tag.
+
+**Note for whoever develops next:** the global `agent-sync` on the Mac is the published package. To
+work on the code again, `npm rm -g @abdur-codes/agent-sync` and `pnpm build && npm link` from the
+repo.
+
 ## Acceptance-phase findings (M3.5, from adopting a real machine)
 
 **Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `a-project-debug` was detected on the
