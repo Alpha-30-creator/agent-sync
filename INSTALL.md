@@ -23,12 +23,12 @@ to install runtimes yourself.
 ## 2. Install the CLI
 
 ```
-npm install -g agent-sync
+npm install -g @abdur-codes/agent-sync
 agent-sync --version
 ```
 
 If the global install fails for permissions reasons, do not retry with `sudo`. Tell the
-user, and offer `npx agent-sync@latest` for the remaining steps instead.
+user, and offer `npx @abdur-codes/agent-sync@latest` for the remaining steps instead.
 
 ## 3. Ask the user the two questions setup needs
 

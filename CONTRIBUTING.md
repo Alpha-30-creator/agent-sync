@@ -35,9 +35,9 @@ To get an `agent-sync` on your PATH that tracks the code you are editing:
 pnpm build && npm link
 ```
 
-`npm link` puts the symlink in npm's own global bin — the same place `npm i -g agent-sync` will
-put the published binary — so switching to the release later is just `npm i -g agent-sync`, and
-`npm rm -g agent-sync` undoes the link. Rebuild (`pnpm build`) after changing anything under
+`npm link` puts the symlink in npm's own global bin — the same place `npm i -g @abdur-codes/agent-sync` will
+put the published binary — so switching to the release later is just `npm i -g @abdur-codes/agent-sync`, and
+`npm rm -g @abdur-codes/agent-sync` undoes the link. Rebuild (`pnpm build`) after changing anything under
 `src/`: the link points at `dist/`, so an unbuilt change is simply not the code that runs.
 
 Deliberately not `pnpm link --global`: pnpm's global bin directory is frequently absent from PATH

@@ -10,7 +10,7 @@ Concrete technology choices, each with its reasoning and the alternatives consid
 
 | Candidate | Verdict | Reasoning |
 |-----------|---------|-----------|
-| **TypeScript / Node** | ✅ chosen | The audience (people who write agent skills and configure MCP servers) overwhelmingly has Node installed and reads TS — maximizes OSS contributors. First-class JSON tooling; excellent YAML/TOML libraries including *format-preserving* ones, which §3 shows is a hard requirement. `npx agent-sync` gives zero-install trial. Strong typing is enough to enforce the pure-core discipline. |
+| **TypeScript / Node** | ✅ chosen | The audience (people who write agent skills and configure MCP servers) overwhelmingly has Node installed and reads TS — maximizes OSS contributors. First-class JSON tooling; excellent YAML/TOML libraries including *format-preserving* ones, which §3 shows is a hard requirement. `npx @abdur-codes/agent-sync` gives zero-install trial. Strong typing is enough to enforce the pure-core discipline. |
 | Go | Strong runner-up | Single static binary is genuinely nicer for distribution. Rejected mainly on contributor alignment and the JSON/YAML "edit-preserving-format" library story being weaker; also slower iteration for one maintainer. If distribution pain ever dominates, the pure core's plain-data design keeps a port feasible. |
 | Rust | ❌ | Maximum robustness, minimum velocity. Overkill for a file-shuffling CLI; highest contributor barrier. |
 | Python | ❌ | Runtime/env management pain on end-user machines (especially Windows) is exactly the kind of friction this tool exists to remove. |
@@ -64,7 +64,7 @@ Explicitly avoided: any daemon/watcher dependency in v1 (chokidar only if/when `
 
 ## 5. Distribution
 
-1. **npm:** `npm i -g agent-sync` / `pnpm add -g` / one-off `npx agent-sync doctor`. Primary channel; audience has Node.
+1. **npm:** `npm i -g @abdur-codes/agent-sync` / `pnpm add -g` / one-off `npx @abdur-codes/agent-sync doctor`. Primary channel; audience has Node.
 2. **Later (post-v1):** Homebrew tap and Scoop/winget manifests wrapping the npm package or a Node-SEA/`bun build --compile` single binary — only if issue traffic shows real demand from Node-less users.
 
 Binary name: `agent-sync`. Alias `asy` considered and deferred: one canonical name until the CLI surface settles.

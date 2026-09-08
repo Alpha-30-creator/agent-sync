@@ -13,8 +13,8 @@ Record the agent versions you ran against, and add them to `verifiedAgainst` in
 
 ## 1. Install as a stranger
 
-- [ ] `npm rm -g agent-sync` first, so nothing is served by a linked development checkout.
-- [ ] `npm i -g agent-sync`, then `agent-sync --version` from a **new** shell in an
+- [ ] `npm rm -g @abdur-codes/agent-sync` first, so nothing is served by a linked development checkout.
+- [ ] `npm i -g @abdur-codes/agent-sync`, then `agent-sync --version` from a **new** shell in an
       unrelated directory.
 - [ ] On Windows, confirm the `.cmd` shim runs from a normal shell, not only from the one
       the install happened in.

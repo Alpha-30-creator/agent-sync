@@ -86,7 +86,7 @@ removing it would churn the core for no gain — and `status` reports it as `n/a
 - [ ] OSS packaging: LICENSE (MIT), CONTRIBUTING.md, issue templates, README quickstart rewritten from real usage, changesets release pipeline, npm publish with provenance
 - [ ] A short screencast/GIF for the README (the status matrix sells the tool)
 
-**Exit:** `npm i -g agent-sync` works for a stranger; announce.
+**Exit:** `npm i -g @abdur-codes/agent-sync` works for a stranger; announce.
 
 ## Post-v1 candidates (unordered, demand-driven)
 

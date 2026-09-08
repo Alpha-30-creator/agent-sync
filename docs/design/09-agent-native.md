@@ -42,7 +42,7 @@ Read https://raw.githubusercontent.com/<owner>/agent-sync/main/INSTALL.md and fo
 `INSTALL.md` is a versioned, agent-readable runbook maintained in this repo. It instructs the agent to:
 
 1. **Check prerequisites** — `node --version` (≥ 20), `git --version`; if missing, stop and give the user the human install links (the agent must not install runtimes itself).
-2. **Run the one real entry point** — `npx agent-sync@latest setup`.
+2. **Run the one real entry point** — `npx @abdur-codes/agent-sync@latest setup`.
 3. **Interview the user for the two decisions setup needs** (agents are good at this): first machine (`init`) or additional machine (`clone <remote>`)? And which git remote to use — including offering to create a private GitHub repo via `gh` if the user wants.
 4. **Verify** with `agent-sync doctor --json` and report the result honestly.
 5. **Offer the opt-in**: `agent-sync import` (adopt existing setup). The second opt-in, `setup --hooks`, arrives with the heartbeat post-v1.

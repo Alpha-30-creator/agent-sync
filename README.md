@@ -5,9 +5,11 @@
 If you use more than one coding agent — Claude Code, OpenAI Codex, Cursor — on more than one machine, you know the problem. You write a good skill in Claude Code on your Mac, and it doesn't exist in Codex, doesn't exist in Cursor, and doesn't exist on your Windows machine. You add an MCP server to Cursor, then hand-translate the same config into TOML for Codex. Every agent speaks its own dialect of the same few ideas, and none of them talk to each other.
 
 ```bash
-npm install -g agent-sync
+npm install -g @abdur-codes/agent-sync
 agent-sync setup --create-remote agent-library
 ```
+
+The package is scoped because npm blocks the bare name as too similar to an unrelated package; the command is plain `agent-sync`.
 
 That creates a private git repository for your library, registers the machine, and deploys agent-sync's own skills into every agent it finds. From then on you can just ask any of them: *"create me a skill for reviewing SQL migrations"* — and it is written to your library, deployed to every agent, committed and pushed, with no second command.
 
