@@ -147,6 +147,17 @@ deploy on Windows because that clone predates the committed `.agent-sync.yaml` m
 is the mechanism that carries project identity between machines; a project's `remote:` field is
 only a linking *hint* and never auto-links.
 
+## The flagship flow works end to end (2026-09-08)
+
+Run for real on the Mac, following the shipped `agent-sync-create-skill` skill exactly as an agent
+would: `new skill --json` → author at the path it returned → `save`. One command deployed
+`skill/sql-migration-review` to claude, codex and cursor, committed it, and pushed it — commit
+`7cb1b67` on the library remote, with no follow-up command and nothing written into any agent's own
+directory. The skill then appeared as an available skill in the same session.
+
+That closes the README's headline claim. Interceptor activation is confirmed in all three agents
+(Cursor by the maintainer directly), and now the flow they activate actually completes.
+
 ## Interceptor activation, first real evidence (2026-09-08)
 
 The premise of the whole agent-native design is that the interceptors beat an agent's own instinct.

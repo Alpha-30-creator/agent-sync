@@ -96,9 +96,10 @@ removing it would churn the core for no gain — and `status` reports it as `n/a
 - [x] OSS packaging: LICENSE, CONTRIBUTING, issue forms, SECURITY, code of conduct, dependabot,
       README rewritten from real usage, tag-driven release with npm provenance, published.
 - [ ] A short screencast/GIF for the README (the status matrix sells the tool).
-- [ ] Run the flagship flow for real: ask an agent to create a skill and let it reach the library,
-      deploy, commit and push with no follow-up command. The interceptors are confirmed to *fire*
-      in all three agents, but no run has yet gone the whole way through `save`.
+- [x] Run the flagship flow for real: done 2026-09-08. Following the shipped skill, one `save`
+      deployed a new skill to all three agents, committed and pushed it, with no follow-up command
+      and nothing written into an agent's own directory. Interceptor activation confirmed in all
+      three agents.
 
 **Exit:** ✅ `npm i -g @abdur-codes/agent-sync` works for a stranger — verified on macOS and
 Windows from a clean install. Published as `0.1.0` on 2026-09-08. Announcement not yet made.
