@@ -67,11 +67,14 @@ the user's behalf is exactly the kind of liberty this tool refuses to take.
 Deliberately a single phase rather than per-milestone adoption: the finished tool is adopted
 once instead of migrating a real setup repeatedly.
 
-- [ ] Rehearsal first: run the complete flow against a sandbox `HOME` seeded from the real probe
+- [x] Rehearsal first: run the complete flow against a sandbox `HOME` seeded from the real probe
       output, on macOS and Windows. Nothing touches `~` until this is clean.
-- [ ] `import` the maintainer's existing skills and MCP servers on the Mac; review every adopted artifact.
-- [ ] `sync` to the Windows machine; confirm parity, then run both agents for real work for a week.
-- [ ] Log every friction point; fix ergonomics before v1.0 rather than after.
+- [x] `import` the maintainer's existing skills and MCP servers on the Mac; review every adopted artifact.
+- [x] `sync` to the Windows machine; confirm parity — including the reverse direction.
+- [x] Log every friction point; fix ergonomics before v1.0 rather than after. Roughly twenty
+      defects were found this way, none of which the test suite could have reached.
+- [ ] Run both agents for real work for a week. Calendar time, not work — this is the only part
+      still outstanding, and it starts now that both machines run the published package.
 
 ## M4 — Polish → public v1.0 (≈ 2 weeks)
 
@@ -81,12 +84,24 @@ would need fresh research in two dialects (Q9) before a line of it could be writ
 post-v1, where demand can decide its priority. `plugin` stays in the schema and the type union —
 removing it would churn the core for no gain — and `status` reports it as `n/a`.
 
-- [ ] `heartbeat` + hook installers for Claude Code and Cursor (`setup --hooks`); `INSTALL.md` agent runbook + paste-line install tested end-to-end from all three agents
-- [ ] `doctor` full checks; `edit`, `mv`; `--json` outputs; smoke checklist doc
-- [ ] OSS packaging: LICENSE (MIT), CONTRIBUTING.md, issue templates, README quickstart rewritten from real usage, changesets release pipeline, npm publish with provenance
-- [ ] A short screencast/GIF for the README (the status matrix sells the tool)
+- [x] `INSTALL.md` agent runbook written. `heartbeat` + hook installers are **deferred to post-v1**
+      with the rest of ambient sync (Q7 unverified).
+- [ ] Paste-line install tested end-to-end from all three agents. `INSTALL.md` exists and its
+      commands are checked against the real CLI by a test, but no agent has yet driven the whole
+      install unaided against a scratch `HOME`.
+- [x] `doctor` full checks (it now reports convergence, and `healthy` answers its own question);
+      `--json` outputs across the whole surface, enforced by a contract sweep; smoke checklist.
+      `edit` and `mv` are **not built** and were never load-bearing — `save` covers editing, and a
+      rename is `rm` plus `add`. Post-v1 unless someone asks.
+- [x] OSS packaging: LICENSE, CONTRIBUTING, issue forms, SECURITY, code of conduct, dependabot,
+      README rewritten from real usage, tag-driven release with npm provenance, published.
+- [ ] A short screencast/GIF for the README (the status matrix sells the tool).
+- [ ] Run the flagship flow for real: ask an agent to create a skill and let it reach the library,
+      deploy, commit and push with no follow-up command. The interceptors are confirmed to *fire*
+      in all three agents, but no run has yet gone the whole way through `save`.
 
-**Exit:** `npm i -g @abdur-codes/agent-sync` works for a stranger; announce.
+**Exit:** ✅ `npm i -g @abdur-codes/agent-sync` works for a stranger — verified on macOS and
+Windows from a clean install. Published as `0.1.0` on 2026-09-08. Announcement not yet made.
 
 ## Post-v1 candidates (unordered, demand-driven)
 
