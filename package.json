@@ -1,7 +1,7 @@
 {
   "name": "@abdur-codes/agent-sync",
-  "version": "0.0.1",
-  "description": "Sync skills and MCP servers across Claude Code, Codex, and Cursor \u2014 and across your devices",
+  "version": "0.1.0",
+  "description": "Sync skills and MCP servers across Claude Code, Codex, and Cursor — and across your devices",
   "keywords": [
     "agent-skills",
     "mcp",
