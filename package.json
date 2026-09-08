@@ -1,6 +1,6 @@
 {
   "name": "agent-sync",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Sync skills and MCP servers across Claude Code, Codex, and Cursor \u2014 and across your devices",
   "keywords": [
     "agent-skills",
@@ -24,7 +24,7 @@
   "type": "module",
   "packageManager": "pnpm@11.23.0",
   "bin": {
-    "agent-sync": "./dist/cli/index.js"
+    "agent-sync": "dist/cli/index.js"
   },
   "files": [
     "dist",

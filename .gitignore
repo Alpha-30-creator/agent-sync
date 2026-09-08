@@ -15,3 +15,4 @@ coverage/
 .codex/skills/
 .cursor/skills/
 .agents/skills/
+*.tgz
