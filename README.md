@@ -23,7 +23,7 @@ or do it yourself: `npx agent-sync@latest setup`.
 
 ## Status
 
-📐 **Design phase.** This repository currently contains the full design documentation. Implementation follows the [roadmap](docs/08-roadmap.md).
+📐 **Design phase.** This repository currently contains the full design documentation. Implementation follows the [roadmap](docs/design/08-roadmap.md).
 
 ## The docs
 
@@ -31,17 +31,17 @@ Read them in order — each builds on the previous one:
 
 | # | Document | What it covers |
 |---|----------|----------------|
-| 1 | [PRD](docs/01-prd.md) | The problem, who it's for, goals, non-goals, user stories, requirements |
-| 2 | [Agent Landscape](docs/02-agent-landscape.md) | Research: where Claude Code, Codex, and Cursor each store skills, MCP config, and plugins — the ground truth the adapters are built on |
-| 3 | [Architecture](docs/03-architecture.md) | System design: canonical store, pure resolution core, adapters, apply engine, drift detection |
-| 4 | [Sync Model](docs/04-sync-model.md) | The heart of the product: scopes, routing rules, precedence, manifest schemas, worked examples |
-| 5 | [Tech Stack](docs/05-tech-stack.md) | Language and library choices with rationale, project layout, distribution |
-| 6 | [CLI Spec](docs/06-cli-spec.md) | Every command, its flags, and example sessions |
-| 7 | [Testing Strategy](docs/07-testing.md) | Test pyramid, cross-platform CI, how purity makes the core trivially testable |
-| 8 | [Roadmap](docs/08-roadmap.md) | Milestones from v0.1 to v1.0, and open questions |
-| 0 | [Getting Started](docs/10-getting-started.md) | Start here if you just want to use it: the mental model, the commands, and the safety guarantees |
-| 0 | [Command Reference](docs/11-command-reference.md) | Every command, option, and example |
-| 9 | [Agent-Native Design](docs/09-agent-native.md) | Agents as installer and interface: the paste-line install, the agent-sync skill pack, transactional auto-sync, and heartbeat hooks |
+| 1 | [PRD](docs/design/01-prd.md) | The problem, who it's for, goals, non-goals, user stories, requirements |
+| 2 | [Agent Landscape](docs/design/02-agent-landscape.md) | Research: where Claude Code, Codex, and Cursor each store skills, MCP config, and plugins — the ground truth the adapters are built on |
+| 3 | [Architecture](docs/design/03-architecture.md) | System design: canonical store, pure resolution core, adapters, apply engine, drift detection |
+| 4 | [Sync Model](docs/design/04-sync-model.md) | The heart of the product: scopes, routing rules, precedence, manifest schemas, worked examples |
+| 5 | [Tech Stack](docs/design/05-tech-stack.md) | Language and library choices with rationale, project layout, distribution |
+| 6 | [CLI Spec](docs/design/06-cli-spec.md) | Every command, its flags, and example sessions |
+| 7 | [Testing Strategy](docs/design/07-testing.md) | Test pyramid, cross-platform CI, how purity makes the core trivially testable |
+| 8 | [Roadmap](docs/design/08-roadmap.md) | Milestones from v0.1 to v1.0, and open questions |
+| 0 | [Getting Started](docs/getting-started.md) | Start here if you just want to use it: the mental model, the commands, and the safety guarantees |
+| 0 | [Command Reference](docs/commands.md) | Every command, option, and example |
+| 9 | [Agent-Native Design](docs/design/09-agent-native.md) | Agents as installer and interface: the paste-line install, the agent-sync skill pack, transactional auto-sync, and heartbeat hooks |
 
 ## The 30-second mental model
 

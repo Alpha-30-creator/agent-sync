@@ -48,7 +48,7 @@ mcp
   github             ✔ synced      – excluded    ✔ synced
   heavy-profiler     – excluded    ✔ synced      – excluded
 plugin
-  my-toolkit         ✔ enabled     n/a           n/a
+  my-toolkit         n/a           n/a           n/a       # post-v1
 
 project acme-app (~/dev/acme-app)
   skill/db-migrate   – excluded    ✔ synced      ✔ synced
@@ -79,8 +79,8 @@ Copy an *existing* skill folder into the store, register it in the manifest (wit
 ### `agent-sync add mcp [<name>] [--from <agent>] [--command ...|--url ...] [--env K=V|K=${secret:x}...] [--targets ...]`
 Create a canonical MCP definition — interactively, from flags, or by importing an existing definition from one agent's config (`--from cursor`). Values that look secret trigger a prompt to convert to `${secret:...}` and store the value in the device secrets file.
 
-### `agent-sync add plugin <plugin>@<marketplace> [--scope ...]`
-Register a Claude plugin declaration.
+### `agent-sync add plugin <plugin>@<marketplace> [--scope ...]` *(post-v1)*
+Register a plugin declaration. Cut from v1 — both Claude Code and Codex have plugin systems, and modelling two dialects needs Q9 answered first. The `plugin` type stays in the schema and reports `n/a`.
 
 ### `agent-sync rm <ref>` / `agent-sync mv <ref> <new-id>`
 Remove (or rename) an artifact: store + manifest + a plan that cleans up deployed copies the lockfile owns (with confirmation). Never touches drifted or unmanaged files without asking.
@@ -123,7 +123,7 @@ Manage the device secrets file (values prompted, never echoed, never in argv his
 ```
 $ agent-sync init --create-remote agent-library --device "macbook"
 ✔ store created at ~/.agent-sync/store
-✔ created private repository abdur/agent-library and pushed your library to it
+✔ created private repository you/agent-library and pushed your library to it
 ✔ device registered as "macbook" — detected: claude, codex, cursor
 $ agent-sync import
 found 12 skills, 5 mcp servers, 2 plugins across 3 agents — select to adopt… ✔ adopted 14
@@ -134,7 +134,7 @@ $ agent-sync sync
 **Second machine (Windows):**
 
 ```
-> agent-sync clone git@github.com:abdur/agent-library.git
+> agent-sync clone git@github.com:you/agent-library.git
 ✔ device registered as "win-desktop" — detected: claude, cursor  (codex: not found)
 > agent-sync apply
 plan: 26 writes across claude, cursor  (codex: masked — not installed)

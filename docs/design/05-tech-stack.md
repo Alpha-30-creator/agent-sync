@@ -60,7 +60,7 @@ Explicitly avoided: any daemon/watcher dependency in v1 (chokidar only if/when `
   touched. Files containing a NUL byte are treated as binary and hashed exactly.
 - **Atomic writes:** temp file + `rename` in the same directory (rename is atomic on all three OSes within a volume).
 - **Case-insensitive filesystems** (macOS/Windows default): artifact ids are required lowercase-kebab to dodge collision surprises.
-- **CI is the enforcement:** every PR runs the full suite on all three OSes; "works on my Mac" cannot merge. Linux is covered by CI even though the author can't test it by hand — which is precisely why it's in the matrix.
+- **CI is the enforcement:** every PR runs the full suite on all three OSes; "works on my Mac" cannot merge. Linux is covered by CI even though it cannot be tested by hand — which is precisely why it's in the matrix.
 
 ## 5. Distribution
 

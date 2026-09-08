@@ -15,7 +15,7 @@
 - ✅ M0 — **Windows verification done**: same `%USERPROFILE%` dot-dir layout as macOS (Q6 resolved).
 - ✅ M0 — positive MCP write-target tests done for all Claude scopes + Codex ([landscape §5b](02-agent-landscape.md)).
 - ✅ M0 spike 2 — surgical edit strategy settled and implemented ([ADR 0007](decisions/0007-surgical-config-editing.md)):
-  pure TOML text-span splicer + jsonc-parser, verified against the owner's real configs.
+  pure TOML text-span splicer + jsonc-parser, verified against real, in-the-wild configs.
 - ✅ M0 — first `capability-table.ts` with verified paths and `verifiedAgainst` versions.
 - ✅ **M0 complete.**
 - ✅ **M3 complete** — MCP servers end to end: canonical schema with `${secret:}` / `${env:}`
@@ -30,12 +30,12 @@
   resolver with provenance, drift classification, the pure planner, git-backed store, lockfile,
   atomic-write shell, and the CLI (`init`, `clone`, `apply`, `status`, `sync`, `add skill`,
   `new skill`, `save`, `rm`, `doctor`). CI green on 3 OSes.
-- ✅ Docs for users: [getting started](10-getting-started.md) and the full
-  [command reference](11-command-reference.md).
+- ✅ Docs for users: [getting started](../getting-started.md) and the full
+  [command reference](../commands.md).
 - ✅ Post-M3 fixes: `import` now finds MCP servers configured inside projects and discovers project
   skills without mistaking them for global ones; artifact comparison ignores line endings; `secret
   set` prompts for the value instead of demanding a pipeline.
-- 🔄 **M3.5 in progress** — the owner has begun adopting the tool on the Mac. Two friction points
+- 🔄 **M3.5 in progress** — adoption of the tool on a real machine has begun. Two friction points
   found immediately: the CLI is not installed as a global command (see *Next step*), and `init`
   silently assumed the store repository already existed. The second is fixed — `init
   --create-remote <name>` now creates it via `gh`, pushes, and registers the device in one command
@@ -53,15 +53,15 @@ so real findings are not buried.
 
 ## Next step (do this first)
 
-**Finish M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the owner adopts the tool
+**Finish M3.5 — the acceptance phase** ([roadmap](08-roadmap.md)), where the tool is adopted
 for real on both machines.
 
-The blanket "rehearse everything in a sandbox first" rule is **waived by the owner** (2026-09-01):
-he is adopting against his real `~`. Keep rehearsing new write paths in a sandbox `HOME` before
+The blanket "rehearse everything in a sandbox first" rule is **waived** (2026-09-01):
+adoption runs against a real `~`. Keep rehearsing new write paths in a sandbox `HOME` before
 handing them over — `init --create-remote` was exercised that way, with a stub `gh` and a real
-git push — but do not block his adoption on a full sandbox pass.
+git push — but do not block adoption on a full sandbox pass.
 
-**One setup gap left**, from the owner's first real `init` attempt:
+**One setup gap left**, from the first real `init` attempt:
 
 - `agent-sync` is not on `PATH` — the package has never been linked or installed globally, and
   pnpm's global bin dir (`~/Library/pnpm/bin`) is itself missing from `PATH` (only its parent is),
@@ -72,7 +72,7 @@ git push — but do not block his adoption on a full sandbox pass.
 The second gap from that attempt — the store repository not existing — is now the tool's job
 rather than an errand: `init --create-remote agent-library` creates it, pushes, and registers the
 device in one command ([ADR 0008](decisions/0008-github-cli-for-remote-creation.md)). It needs the
-GitHub CLI, which is installed and signed in as `Alpha-30-creator` on this Mac. Note that `gh`
+GitHub CLI, which must be installed and signed in. Note that `gh`
 here is configured for **https**, so the remote it writes is the https URL, not ssh.
 
 Then **M4**: the agent-native pieces (the three interface skills, `INSTALL.md`, `setup`, heartbeat
@@ -86,7 +86,7 @@ approval array. Writing `.mcp.json` leaves a project server pending Claude's own
 which is a security decision that belongs to the user. An opt-in flag can come later if the
 friction proves real during dogfooding.
 
-**Dogfooding is deliberately deferred to one acceptance phase before v1.0** — the owner wants to
+**Dogfooding is deliberately deferred to one acceptance phase before v1.0** — the intent is to
 adopt the finished tool once, not migrate his real setup at each milestone. Do not stop and ask for
 per-milestone dogfooding.
 
@@ -95,9 +95,9 @@ config shapes captured in `docs/02-agent-landscape.md` §5a/§5b, and keep the r
 (`--store` + a sandbox `HOME`) working so the full tool can be exercised against a realistic
 machine without touching `~`.
 
-## Acceptance-phase findings (M3.5, from the AETEA adoption)
+## Acceptance-phase findings (M3.5, from adopting a real machine)
 
-**Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `aetea-debug` was detected on the
+**Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `a-project-debug` was detected on the
 next `apply`, which refused with exit 3 and named both ways out; `status` showed `⚠ drifted` for
 claude and cursor and `✔ synced` for codex, which had not been touched. The edit and the library
 copy were both intact afterwards, and `--overwrite` restored the deployed file byte-for-byte.
@@ -107,7 +107,7 @@ Non-negotiable #3 verified outside the test suite.
 `mcp/langchain-docs` and it deployed to all three agents, then published for Windows. The
 byte-exactness claim is now verified on a real config rather than a fixture: the only change to a
 4.3 KB `~/.codex/config.toml` full of comments, env tables and numeric values was the three added
-lines of `[mcp_servers.langchain-docs]`. Claude's 57 KB `~/.claude.json` and Cursor's `mcp.json`
+lines of `[mcp_servers.langchain-docs]`. Claude's much larger `~/.claude.json` and Cursor's `mcp.json`
 likewise changed only where they had to, and backups were taken before the first edit. `import`
 also refused all three of the machine's Codex servers with specific reasons (absolute path,
 relative command, needs a `cwd`, switched off) rather than adopting something that could not
@@ -131,13 +131,13 @@ travel.
   machine, and sends you to `apply` rather than `include` when the project already carries
   artifacts.
 - `package.json` had no `packageManager`, so a fresh machine got whatever corepack defaulted to
-  (10.6.2 on the owner's Windows box, 11.x here). Pinned, and the now-conflicting `version` input
+  (10.6.2 on one machine, 11.x on another). Pinned, and the now-conflicting `version` input
   dropped from the CI workflow.
 
-**The Mac side of M3.5 is done (2026-09-08).** The owner's AETEA skills are adopted and live: 8
-skills project-scoped to `aetea`, deployed into `.claude/skills` and `.codex/skills` (Cursor is
-served by the `.claude` copy), published to the private `agent-library` remote, and the old
-hand-made symlinks in `.cursor/skills`, `.agents/skills` and the `aetea-refine-skill` alias
+**The Mac side of M3.5 is done (2026-09-08).** A real project's skills are adopted and live: 8
+skills project-scoped to `a-project`, deployed into `.claude/skills` and `.codex/skills` (Cursor is
+served by the `.claude` copy), published to the private library remote, and the old
+hand-made symlinks in `.cursor/skills`, `.agents/skills` and the `a-project-refine-skill` alias
 removed. `apply` is idempotent, `doctor` is healthy. Windows is next.
 
 - **Fixed:** `sync` could not complete on a store created by `init --remote`. It pulled before the
@@ -148,12 +148,12 @@ removed. `apply` is idempotent, `doctor` is healthy. Windows is next.
   treated as unmanaged and left alone, or at least reported. Deploying over one is currently
   indistinguishable from deploying into an empty directory.
 - **Fixed:** `status` column widths broke when an id was long — the artifact column was a fixed 28
-  characters, so `skill/aetea-create-refine-skill` ran into the first status cell and the matrix
+  characters, so `skill/a-project-create-refine-skill` ran into the first status cell and the matrix
   stopped lining up. The column now sizes to the longest id. Notes were also printing
   double-spaced, one blank line each.
 - **Fixed:** a skill directory with no `SKILL.md` still cannot enter the library — correct — but
-  the AETEA adoption showed why that matters: five skills link to a sibling
-  `../aetea-shared/reference.md`, so the companion directory had to become a real skill (a
+  the adoption showed why that matters: five skills link to a sibling
+  `../a-project-shared/reference.md`, so the companion directory had to become a real skill (a
   `SKILL.md` whose body points at `reference.md`) before any of them could be adopted. It works,
   and the relative links resolve in every deployed copy on both platforms. A first-class
   "companion directory" concept is still worth considering.
@@ -179,16 +179,15 @@ removed. `apply` is idempotent, `doctor` is healthy. Windows is next.
   and `~/.cursor/skills` on this machine. Import and drift logic must treat those as unmanaged
   and never clobber them (Q10).
 
-## Environment facts (this dev machine)
+## Environment facts (the development machines)
 
 - macOS, Node v25 (CI targets 20/22/24), pnpm via corepack, git 2.50.
 - Agents present: `claude`, `codex`, `cursor-agent` all on PATH.
-- GitHub: `Alpha-30-creator`; repo `agent-sync` (public). npm name `agent-sync` is free/unclaimed.
+- Repo `agent-sync` (public); the npm name was unclaimed as of 2026-09-08.
 
-## Owner-only actions (blocked on the human)
+## Maintainer-only actions (blocked on a human)
 
-- Install/link the CLI so `agent-sync` resolves on this Mac (M3.5): `pnpm setup`, then
-  `pnpm build && pnpm link --global`.
+- Install or link the CLI so `agent-sync` resolves on the development machine.
 - ~~Windows probe run (M0).~~ Done 2026-08-25.
 - npm publish / org creation (M4).
 - Anything touching his accounts or making the project's first public announcement.

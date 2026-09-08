@@ -134,7 +134,7 @@ contents), so its output is safe to paste into an issue.
 | Codex `config.toml` has **no** `projects.*` tables here (macOS has 8) | Those accrue with use; project-scope Codex behaviour must be probed on a machine that has them |
 | `~/.claude.json` again has **no** `mcpServers` key (35 KB of other state) | Claude's global MCP location remains unconfirmed on *both* machines — the positive test (add a server via `claude mcp add`, re-probe) is still the outstanding M0 item |
 | `~/.agents/skills` does not exist here, though it does on macOS | The shared-convention directory is created by third-party tooling, not by the agents. Support it opportunistically (Q10); never assume it |
-| Agent versions differ across the owner's own two machines (Claude 2.1.153 vs 2.1.245, codex 0.134.0 vs 0.149.1, cursor-agent May vs Aug) | `verifiedAgainst` in the capability table must be a *range or list*, not a single version, and `doctor` should flag an installed version outside the verified set rather than assuming the layout holds |
+| Agent versions differ across the two machines used for verification (Claude 2.1.153 vs 2.1.245, codex 0.134.0 vs 0.149.1, cursor-agent May vs Aug) | `verifiedAgainst` in the capability table must be a *range or list*, not a single version, and `doctor` should flag an installed version outside the verified set rather than assuming the layout holds |
 
 ## 5b. MCP write targets — confirmed by positive test
 

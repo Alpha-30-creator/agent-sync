@@ -1,6 +1,6 @@
 # Roadmap
 
-Milestones sized for a single maintainer with dogfooding as the forcing function. Each milestone ends with something the author actually uses daily — the fastest way to find out which design assumptions are wrong.
+Milestones sized for a single maintainer with dogfooding as the forcing function. Each milestone ends with something actually used daily — the fastest way to find out which design assumptions are wrong.
 
 ---
 
@@ -10,10 +10,10 @@ De-risk the two things the whole design leans on, before writing product code.
 
 - [x] **Probe tooling:** `scripts/probe.mjs` reports layout + file shape (never contents) on any OS.
 - [x] **Landscape verification — macOS:** all three agents probed; Cursor global skills dir confirmed (Q1 resolved); **Codex plugin system discovered** (Q9 raised); symlinked third-party skills found in the wild (Q10 raised). Recorded in [Agent Landscape §5a](02-agent-landscape.md).
-- [x] **Landscape verification — Windows 11:** layout identical to macOS (Q6 resolved); Codex plugins confirmed cross-platform; agent versions drift between the owner's machines, so `verifiedAgainst` must be a range.
+- [x] **Landscape verification — Windows 11:** layout identical to macOS (Q6 resolved); Codex plugins confirmed cross-platform; agent versions drift between the development machines, so `verifiedAgainst` must be a range.
 - [x] **Positive MCP tests:** add a throwaway server via each agent's own CLI/UI, re-probe, and confirm exactly which file each agent writes (the Mac has no Claude MCP servers configured, so its location is still unconfirmed).
 - [x] Encode all of the above as the first `capability-table.ts` with `verifiedAgainst` versions.
-- [x] **TOML surgical-edit spike:** take the author's real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
+- [x] **TOML surgical-edit spike:** take a real Codex `config.toml`; upsert/delete `[mcp_servers.*]` tables via candidate libraries; measure fidelity of everything else (comments, ordering, formatting). Pick the approach ([Tech Stack §3](05-tech-stack.md)). Same exercise for `~/.claude.json` with jsonc-parser (expected easy; confirm).
 - [x] Scaffold: repo, pnpm, TS strict, Biome, Vitest, dependency-cruiser rule, 3-OS CI running one trivial test.
 
 **Exit:** ✅ done. All [verify] markers resolved; write path proven safe on real config files; CI matrix green.
@@ -64,19 +64,19 @@ the user's behalf is exactly the kind of liberty this tool refuses to take.
 
 ## M3.5 — Acceptance: dogfood the whole tool (owner + Claude, together)
 
-Deliberately a single phase rather than per-milestone adoption: the owner adopts the finished tool
+Deliberately a single phase rather than per-milestone adoption: the finished tool is adopted
 once instead of migrating a real setup repeatedly.
 
 - [ ] Rehearsal first: run the complete flow against a sandbox `HOME` seeded from the real probe
       output, on macOS and Windows. Nothing touches `~` until this is clean.
-- [ ] `import` the owner's existing skills and MCP servers on the Mac; review every adopted artifact.
+- [ ] `import` the maintainer's existing skills and MCP servers on the Mac; review every adopted artifact.
 - [ ] `sync` to the Windows machine; confirm parity, then run both agents for real work for a week.
 - [ ] Log every friction point; fix ergonomics before v1.0 rather than after.
 
 ## M4 — Polish → public v1.0 (≈ 2 weeks)
 
 Plugins were cut from v1 on 2026-09-08: getting the tool published matters more than a third
-artifact type, nothing the owner uses daily depends on it, and it is the one remaining area that
+artifact type, nothing the maintainer uses daily depends on it, and it is the one remaining area that
 would need fresh research in two dialects (Q9) before a line of it could be written. It moves to
 post-v1, where demand can decide its priority. `plugin` stays in the schema and the type union —
 removing it would churn the core for no gain — and `status` reports it as `n/a`.

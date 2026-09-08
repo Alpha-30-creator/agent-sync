@@ -230,7 +230,7 @@ agent-sync rm mcp/github
 
 | Argument | Meaning |
 |---|---|
-| `<ref>` | `skill/<id>`, `mcp/<id>`, or `plugin/<id>`. A bare id works when only one type uses it. |
+| `<ref>` | `skill/<id>` or `mcp/<id>`. A bare id works when only one type uses it. `plugin/<id>` parses but reports `n/a` — plugins are post-v1. |
 
 Removes it from the library **and** from every agent it was deployed to. Anything
 agent-sync does not manage is left alone.
@@ -330,7 +330,7 @@ agent-sync route skill/db-migrate --project here --clear
 | Argument / option | Meaning |
 |---|---|
 | `[ref]` | The artifact to route. Omit it and use `--type` to set a default for a whole type. |
-| `--type <type>` | `skill`, `mcp`, or `plugin`. Sets the default for that type. |
+| `--type <type>` | `skill` or `mcp`. Sets the default for that type. (`plugin` is accepted but deploys nothing — post-v1.) |
 | `--project <id>` | Scope the rule to a project. `here` means the project you are standing in. |
 | `--targets <agent...>` | The exact set of agents. `all` means every agent. |
 | `--add <agent...>` | Add agents to whatever the next rule up resolves to. |

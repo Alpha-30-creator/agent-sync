@@ -91,7 +91,7 @@ artifacts:
       targets: [codex]
   plugin:
     my-toolkit:
-      source: github.com/abdur/claude-plugins   # marketplace
+      source: github.com/you/claude-plugins   # marketplace
       scope: global
 
 # ── Projects (+ Layers 3 and 1) ────────────────────────────────────────

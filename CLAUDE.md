@@ -1,6 +1,6 @@
 # CLAUDE.md — working agreement for this repo
 
-**Read `docs/STATUS.md` first.** It is the living handoff: current milestone, what's done, what's
+**Read `docs/design/STATUS.md` first.** It is the living handoff: current milestone, what's done, what's
 in flight, and the exact next step. Then read whichever design doc covers the area you're touching.
 
 ## What this is
@@ -23,7 +23,7 @@ they were written before implementation and are kept current as code lands.
 3. **Never destroy user work.** Any write to a user's agent config merges surgically into what's
    there, backs up before first edit in a run, and refuses rather than guesses when it cannot parse
    a file. Drift is surfaced, never silently overwritten.
-4. **Don't re-litigate settled decisions.** `docs/decisions/` holds short ADRs with the rationale
+4. **Don't re-litigate settled decisions.** `docs/design/decisions/` holds short ADRs with the rationale
    and the rejected alternatives. If you think one is wrong, say so explicitly and write a new ADR
    superseding it — don't quietly drift the code away from it.
 
@@ -58,11 +58,11 @@ If they are not present, run `agent-sync apply` from the repo root.
 - **TypeScript:** ESM only, `strict`, `readonly` types in core, discriminated unions over booleans,
   `Result`-style returns inside core (throwing is a shell-only privilege).
 - **Tests:** every core module gets table-driven unit tests; invariants from
-  `docs/04-sync-model.md §9` get property tests. New behavior lands with its test in the same
+  `docs/design/04-sync-model.md §9` get property tests. New behavior lands with its test in the same
   commit. A bug fix starts with the failing fixture — then revert the fix and confirm the test
   fails, or it is not a regression test.
 - **Docs:** when code changes a documented behavior, update the doc in the same commit. Update
-  `docs/STATUS.md` at the end of every work session.
+  `docs/design/STATUS.md` at the end of every work session.
 
 ## Git & GitHub
 

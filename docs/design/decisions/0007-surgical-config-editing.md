@@ -7,7 +7,7 @@ agent's entire state (model settings, plugins, marketplaces, per-project trust l
 section), and `~/.claude.json` is ~53 KB of mixed user state. NFR-4 promises we never destroy
 user work.
 
-Measured against the owner's real configs during M0:
+Measured against real, in-the-wild configs during M0:
 
 - **Codex's own `codex mcp add` damages the file.** Adding one server dropped `args = []` from an
   unrelated server, reordered another server's `env` keys alphabetically, and rewrote
@@ -28,7 +28,7 @@ Measured against the owner's real configs during M0:
 - **Both:** re-parse after editing and compare the unmanaged regions before writing; back up the
   file before the first edit of a run; refuse to write when the original cannot be parsed.
 
-**Consequences.** Verified against the owner's real 119-line `config.toml`: the untouched prefix is
+**Consequences.** Verified against a real 119-line `config.toml`: the untouched prefix is
 byte-identical, removal is an exact inverse, comments survive, and an independent parser confirms
 unrelated configuration is unchanged. agent-sync is measurably safer with a user's Codex config than
 Codex's own CLI is — worth stating plainly in the README.

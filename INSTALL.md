@@ -133,4 +133,4 @@ Say this in your own words:
 - **Exit code 3** — agent-sync needs a decision from the user. Read the message, ask
   them, and never choose for them.
 
-Full command reference: https://github.com/Alpha-30-creator/agent-sync/blob/main/docs/11-command-reference.md
+Full command reference: https://github.com/Alpha-30-creator/agent-sync/blob/main/docs/commands.md

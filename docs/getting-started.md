@@ -208,11 +208,11 @@ Every command accepts `--json` for machine-readable output.
 
 ## What it does not do yet
 
-- **Plugins are not synced yet** (planned for v1.0). Claude Code and Codex both have
-  plugin systems; agent-sync records them but does not yet install them for you.
-- **Your agents can't drive it yet.** The plan is for agent-sync to install a skill into
-  each agent so you can just say "make me a skill that does X" and it happens. That's
-  v1.0 work; today it's a CLI you run yourself.
-- **MCP server names must be lowercase** with hyphens or underscores. A server named
-  `Docs by LangChain` in your Cursor config can't be imported under that name yet.
+- **Plugins are not synced.** Claude Code and Codex both have plugin systems; agent-sync
+  records them but does not install them for you. Deliberately cut from the first
+  release so the rest could ship.
+- **MCP server names must be lowercase** with hyphens or underscores. A server your agent
+  calls `Docs by LangChain` cannot be stored under that name — `agent-sync import --as
+  "Docs by LangChain=langchain-docs"` renames it on the way in, and the original entry in
+  your agent's own config is left exactly where it is.
 - **Rules files** (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules`) are not managed.

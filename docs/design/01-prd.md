@@ -1,7 +1,7 @@
 # Product Requirements Document
 
 **Product:** agent-sync
-**Status:** Draft v1
+**Status:** Implemented; kept as the statement of intent
 **Author:** Abdur Rahman Saad
 **Last updated:** 2026-08-25
 
@@ -163,7 +163,7 @@ The user's mental model shifts from "I configured Cursor on my Mac" to "I own a 
 - **Time-to-parity:** minutes from fresh machine to fully configured (target: < 5 min including git clone).
 - **Convergence trust:** zero reported cases of silent data loss (drifted file overwritten without consent).
 - **Adoption signal:** GitHub stars/issues from multi-agent users; skills-adjacent communities linking to it.
-- **Dogfood test:** the author's own Mac + Windows setup runs entirely through agent-sync within one week of v0.2.
+- **Dogfood test:** a real Mac + Windows setup runs entirely through agent-sync within one week of v0.2.
 
 ## 11. Risks
 

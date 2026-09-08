@@ -6,9 +6,9 @@ which makes this a good time to argue about the design as well as the implementa
 ## Orientation
 
 1. `README.md` — what the tool is.
-2. `docs/04-sync-model.md` — the routing/precedence model; the heart of the product.
-3. `docs/03-architecture.md` — how the code is laid out and why.
-4. `docs/decisions/` — short ADRs. If you want to change a settled decision, write one that
+2. `docs/design/04-sync-model.md` — the routing/precedence model; the heart of the product.
+3. `docs/design/03-architecture.md` — how the code is laid out and why.
+4. `docs/design/decisions/` — short ADRs. If you want to change a settled decision, write one that
    supersedes it rather than drifting the code.
 
 ## Setup

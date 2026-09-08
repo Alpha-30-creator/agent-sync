@@ -87,9 +87,9 @@ subprocess, so the shell code it exercises hardest is not instrumented, and a gl
 mostly measure that artefact rather than real risk. The shell's safety properties are asserted
 directly instead — atomic writes, backups, byte-exact config edits, and the golden CLI scenarios.
 
-Windows runs are not optional or allow-fail. Most real-world breakage will be Windows paths/attributes; the author can hand-test Windows but Linux only via CI — which is exactly what the matrix covers.
+Windows runs are not optional or allow-fail. Most real-world breakage will be Windows paths/attributes; Windows can be hand-tested but Linux only via CI — which is exactly what the matrix covers.
 
 ## 7. Test data honesty
 
-- Fixtures must be periodically re-validated against live agents ("does Claude Code still parse this `.mcp.json`?"). A **manual smoke checklist** (docs/checklists/smoke.md, written at v0.1) covers the one thing automation can't: that the *agents themselves* actually discover and load what we deploy. Run on the author's Mac + Windows before each release.
+- Fixtures must be periodically re-validated against live agents ("does Claude Code still parse this `.mcp.json`?"). A **manual smoke checklist** (docs/checklists/smoke.md, written at v0.1) covers the one thing automation can't: that the *agents themselves* actually discover and load what we deploy. Run on a real Mac and Windows before each release.
 - The capability table carries a `verifiedAgainst` version per agent (e.g. `cursor: "2.4.x"`); `doctor` surfaces staleness, and releases bump these deliberately.
