@@ -16,8 +16,10 @@ The complete command surface for v1. Conventions first, then each command with i
 
 ## 2. Setup & sync commands
 
-### `agent-sync setup [--hooks] [--remote <git-url>] [--clone <git-url>]`
-Machine onboarding and repair, for humans and agents ([Agent-Native §3](09-agent-native.md)): install/confirm CLI, run `init` or `clone`, probe agents, write `device.yaml`, deploy the interface skill pack into every detected agent, and (with `--hooks`, opt-in) install session-start heartbeat hooks for agents that support them. Idempotent — re-run any time to converge a machine's installation.
+### `agent-sync setup [--remote <git-url>] [--clone <git-url>] [--create-remote <name> [--public]] [--device <name>]`
+Machine onboarding and repair, for humans and agents ([Agent-Native §3](09-agent-native.md)): run `init` or `clone`, probe agents, write `device.yaml`, and deploy the interface skill pack into every detected agent. The three source flags answer the same question and are mutually exclusive. Idempotent — re-run any time to converge a machine's installation, which is also the repair path when an agent loses the skill pack. Re-running without `--device` keeps the name this machine already has: the lockfile recording what was deployed here is keyed by it, so a silent rename would orphan that history.
+
+`--hooks` is deferred with the heartbeat to post-v1 (Q7).
 
 ### `agent-sync init [--remote <git-url>] [--create-remote <name> [--public]]`
 Create the canonical store (default `~/.agent-sync/store`), `git init`, write starter manifest + store README, optionally set remote. Also writes `~/.agent-sync/device.yaml` after asking for a device name and probing which agents are installed.

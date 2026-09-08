@@ -11,7 +11,15 @@
  * fine. What is asserted is that the CLI *parsed* them.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +27,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const CLI = fileURLToPath(new URL('../../dist/cli/index.js', import.meta.url));
 const PACK = fileURLToPath(new URL('../../dist/skillpack', import.meta.url));
+const INSTALL = fileURLToPath(new URL('../../INSTALL.md', import.meta.url));
 
 /** Commander's parse failures — the only thing this suite is looking for. */
 const PARSE_ERROR = /error: (unknown command|unknown option|too many arguments|missing required)/;
@@ -74,12 +83,35 @@ const commandsIn = (markdown: string): string[] => {
 };
 
 let home: string;
+let safeBin: string;
 let prescribed: { file: string; command: string }[];
 
 beforeAll(() => {
   home = join(tmpdir(), `agent-sync-pack-cmds-${process.pid}-${Date.now()}`);
   for (const dir of ['.claude', '.codex', '.cursor'])
     mkdirSync(join(home, dir), { recursive: true });
+
+  /**
+   * A PATH with git but deliberately without `gh`.
+   *
+   * These commands are executed for real, and INSTALL.md documents
+   * `setup --create-remote`, which asks the GitHub CLI to make a repository. Run against
+   * a developer's authenticated gh, that would create one on their account as a side
+   * effect of running the tests. With gh absent it stops at "the GitHub CLI was not
+   * found" — parsed, which is all this suite asserts, and provably inert.
+   */
+  safeBin = join(home, 'safe-bin');
+  mkdirSync(safeBin, { recursive: true });
+  if (process.platform !== 'win32') {
+    const gitPath = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
+    writeFileSync(join(safeBin, 'git'), `#!/bin/sh\nexec ${gitPath} "$@"\n`);
+    chmodSync(join(safeBin, 'git'), 0o755);
+  }
+
+  const fromInstall = commandsIn(readFileSync(INSTALL, 'utf8')).map((command) => ({
+    file: 'INSTALL.md',
+    command,
+  }));
 
   prescribed = readdirSync(PACK)
     .filter((name) => statSync(join(PACK, name)).isDirectory())
@@ -92,7 +124,8 @@ beforeAll(() => {
             command,
           })),
         ),
-    );
+    )
+    .concat(fromInstall);
 });
 
 afterAll(() => {
@@ -115,7 +148,13 @@ describe('the commands the shipped skills prescribe', () => {
         output = execFileSync(process.execPath, [CLI, ...args], {
           cwd: home,
           encoding: 'utf8',
-          env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
+          env: {
+            ...process.env,
+            HOME: home,
+            USERPROFILE: home,
+            NO_COLOR: '1',
+            ...(process.platform === 'win32' ? {} : { PATH: safeBin }),
+          },
         });
       } catch (error) {
         const failed = error as { stdout?: string; stderr?: string };

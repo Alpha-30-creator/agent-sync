@@ -45,7 +45,7 @@ Read https://raw.githubusercontent.com/<owner>/agent-sync/main/INSTALL.md and fo
 2. **Run the one real entry point** — `npx agent-sync@latest setup`.
 3. **Interview the user for the two decisions setup needs** (agents are good at this): first machine (`init`) or additional machine (`clone <remote>`)? And which git remote to use — including offering to create a private GitHub repo via `gh` if the user wants.
 4. **Verify** with `agent-sync doctor --json` and report the result honestly.
-5. **Offer the two opt-ins**: `agent-sync import` (adopt existing setup) and `agent-sync setup --hooks` (ambient sync, §5).
+5. **Offer the opt-in**: `agent-sync import` (adopt existing setup). The second opt-in, `setup --hooks`, arrives with the heartbeat post-v1.
 
 Design rules for `INSTALL.md`: idempotent (safe to re-run; `setup` detects existing installs and converges), no `curl | bash` (the agent runs inspectable commands), pinned to the same repo version it documents, and it never asks the agent to handle credentials — git auth is whatever the user's git already does.
 
@@ -57,7 +57,8 @@ One command owns machine onboarding, for humans and agents alike:
 - runs `init`/`clone` (flag-driven or interactive),
 - probes agents and writes `device.yaml`,
 - **installs the interface skill pack (§4) into every detected agent**, and
-- with `--hooks`, installs the ambient-sync hooks (§5) — always opt-in, never default.
+- ~~with `--hooks`, installs the ambient-sync hooks (§5)~~ — **deferred to post-v1** with the
+  heartbeat itself (Q7 unverified), so v1's `setup` has no `--hooks` flag.
 
 The same command re-run later is a repair tool ("my Cursor lost the skill pack") — it just converges, like everything else.
 

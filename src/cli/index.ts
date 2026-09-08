@@ -12,6 +12,7 @@ import { runClone, runInit } from './commands/init.js';
 import { runAddSkill, runNewSkill, runRemove, runSave } from './commands/library.js';
 import { runAddMcp, runSecret } from './commands/mcp.js';
 import { runInclude, runLink, runRoute, runToggle, runUnlink } from './commands/project.js';
+import { runSetup } from './commands/setup.js';
 import { runDoctor, runSync } from './commands/sync.js';
 import { EXIT, failure } from './output.js';
 
@@ -34,6 +35,40 @@ program
   .version('0.0.0')
   .option('--store <path>', 'use a store other than ~/.agent-sync')
   .option('--json', 'machine-readable output (stable schemaVersion)', false);
+
+program
+  .command('setup')
+  .description('set this machine up: library, device, and the agent-sync skills')
+  .option('--remote <git-url>', 'sync through a repository that already exists')
+  .option('--clone <git-url>', 'join a library that already exists')
+  .option(
+    '--create-remote <name>',
+    'create the repository on GitHub, then sync through it: "name" or "owner/name"',
+  )
+  .option('--public', 'make the created repository public (default: private)', false)
+  .option('--device <name>', 'name for this machine')
+  .action(
+    (options: {
+      remote?: string;
+      clone?: string;
+      createRemote?: string;
+      public?: boolean;
+      device?: string;
+    }) => {
+      const g = globals();
+      run(
+        runSetup({
+          json: g.json === true,
+          visibility: options.public === true ? 'public' : 'private',
+          ...(g.store === undefined ? {} : { storeOverride: g.store }),
+          ...(options.remote === undefined ? {} : { remote: options.remote }),
+          ...(options.clone === undefined ? {} : { cloneUrl: options.clone }),
+          ...(options.createRemote === undefined ? {} : { createRemote: options.createRemote }),
+          ...(options.device === undefined ? {} : { deviceName: options.device }),
+        }),
+      );
+    },
+  );
 
 program
   .command('init')
