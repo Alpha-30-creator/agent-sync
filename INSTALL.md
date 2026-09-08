@@ -73,7 +73,9 @@ agent-sync doctor --json
 ```
 
 Read the result and tell the user plainly: which agents were detected, whether the store
-and git are healthy, and anything it warns about. Exit code 2 means it worked with
+and git are healthy, and anything it warns about. Check the `healthy` field rather than
+`ok` — `ok` only says the command ran, and is `true` even when there is work pending.
+`pending` counts artifacts that should be deployed here and are not. Exit code 2 means it worked with
 warnings — repeat them, do not swallow them. If an agent they use was not detected, say
 so; agent-sync can only deploy to agents that are actually installed.
 

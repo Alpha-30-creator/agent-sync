@@ -114,9 +114,19 @@ describe('setting up a machine in one command', () => {
     expect(pendingBefore).toBeGreaterThan(0);
     expect(run(['doctor']).stdout).toContain('not deployed');
 
+    // `ok` stays true throughout: it reports whether the command worked, which is what
+    // it means for every other command, and exit 2 is "done, with warnings". The
+    // question "is this machine fine?" is `healthy`, and conflating the two is how a
+    // consumer concluded a machine with nothing deployed was in good shape.
+    const parsedBefore = JSON.parse(before.stdout) as { ok: boolean; healthy: boolean };
+    expect(parsedBefore.ok).toBe(true);
+    expect(parsedBefore.healthy).toBe(false);
+
     run(['apply']);
     const after = run(['--json', 'doctor']);
-    expect((JSON.parse(after.stdout) as { pending: number }).pending).toBe(0);
+    const parsedAfter = JSON.parse(after.stdout) as { pending: number; healthy: boolean };
+    expect(parsedAfter.pending).toBe(0);
+    expect(parsedAfter.healthy).toBe(true);
     expect(run(['doctor']).stdout).toContain('everything looks healthy');
   });
 

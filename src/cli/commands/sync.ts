@@ -163,6 +163,17 @@ export const runDoctor = (options: DoctorOptions): ExitCode => {
     emitJson('doctor', problems.length === 0, {
       store: layout.store,
       storeExists,
+      /**
+       * Whether the machine is fine, as opposed to whether the command worked.
+       *
+       * `ok` is a property of the command across the whole CLI: true unless it failed
+       * to do its job, which keeps exit 2 meaning "done, with warnings". A consumer
+       * asking doctor "is this machine healthy?" was reading `ok` and getting `true`
+       * from a machine with undeployed artifacts. That question deserves its own field
+       * rather than overloading one whose meaning every other command shares. It says
+       * exactly what the human output says.
+       */
+      healthy: problems.length === 0 && notes.length === 0,
       pending,
       git: git.isGitAvailable(),
       remote: storeExists ? git.remoteUrl(layout.store) : null,

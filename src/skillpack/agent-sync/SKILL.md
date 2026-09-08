@@ -78,11 +78,16 @@ machines are refused with a reason — that is correct behaviour, not a failure.
 ## Diagnosing
 
 ```
-agent-sync doctor
+agent-sync doctor --json
 ```
 
 Reports the store, git, and which agents are installed with their versions. Start here
-when something is missing. If an agent's version is outside the range agent-sync has
+when something is missing.
+
+Read `healthy`, not `ok`. `ok` says the command ran, which it almost always did — it is
+`true` even at exit 2. `healthy` is the answer to "is this machine fine?", and `pending`
+counts artifacts the library says should be deployed here and are not. A machine can be
+perfectly reachable and still be deploying nothing. If an agent's version is outside the range agent-sync has
 verified, it says so — layouts may have moved.
 
 For failures, warnings and drift in detail, see [troubleshoot.md](troubleshoot.md).
