@@ -58,6 +58,14 @@ export type Operation =
       readonly path: string;
       readonly reason: DriftState;
       readonly question: string;
+      /**
+       * The flags that answer this question, in the order they are offered.
+       *
+       * The question itself is prose for a human. An agent branching on exit 3 has to
+       * choose between them without parsing English, and the skill pack tells it to ask
+       * the user which — so the options have to be data, not a sentence to interpret.
+       */
+      readonly resolutions: readonly string[];
     };
 
 export interface Plan {
@@ -132,6 +140,7 @@ export const buildPlan = (input: PlanInput): Plan => {
         path: target.path,
         reason: state,
         question: questionFor(state, ref, target.path),
+        resolutions: ['--adopt', '--overwrite'],
       });
     }
   }

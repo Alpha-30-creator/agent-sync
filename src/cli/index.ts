@@ -14,7 +14,7 @@ import { runAddMcp, runSecret } from './commands/mcp.js';
 import { runInclude, runLink, runRoute, runToggle, runUnlink } from './commands/project.js';
 import { runSetup } from './commands/setup.js';
 import { runDoctor, runSync } from './commands/sync.js';
-import { EXIT, failure } from './output.js';
+import { configureOutput, EXIT, failure } from './output.js';
 
 const program = new Command();
 
@@ -24,6 +24,17 @@ interface GlobalOptions {
 }
 
 const globals = (): GlobalOptions => program.opts<GlobalOptions>();
+
+/**
+ * Tell the output layer which command is running before any of it produces output, so
+ * `--json` is honoured on every path including the ones that only fail.
+ */
+program.hook('preAction', (_program, actionCommand) => {
+  const path = [actionCommand.parent?.name(), actionCommand.name()]
+    .filter((name): name is string => name !== undefined && name !== 'agent-sync')
+    .join(' ');
+  configureOutput(globals().json === true, path.length > 0 ? path : actionCommand.name());
+});
 
 const run = (code: number): void => {
   process.exitCode = code;

@@ -27,15 +27,45 @@ export const emitJson = (command: string, ok: boolean, payload: Record<string, u
   process.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
 };
 
+/**
+ * Whether this run is talking to an agent, and which command is speaking.
+ *
+ * `--json` promises one parseable envelope per run. Leaving that to each command meant
+ * every error path had to remember, and most did not: a sweep of the whole surface found
+ * commands printing prose on failure under `--json`, which an agent cannot parse and
+ * cannot branch on. Enforcing it here means a command added later inherits the contract
+ * instead of having to re-implement it.
+ */
+let agentMode: { readonly json: boolean; readonly command: string } = {
+  json: false,
+  command: 'agent-sync',
+};
+
+export const configureOutput = (json: boolean, command: string): void => {
+  agentMode = { json, command };
+};
+
 export const line = (text = ''): void => {
+  // Human decoration would corrupt the single JSON document.
+  if (agentMode.json) return;
   process.stdout.write(`${text}\n`);
 };
 
 export const success = (text: string): void => line(`${pc.green('✔')} ${text}`);
 export const warn = (text: string): void => line(`${pc.yellow('⚠')} ${text}`);
+
+/**
+ * Report a failure. Under `--json` this *is* the envelope, so callers that already emit
+ * their own must not also call this.
+ */
 export const failure = (text: string): void => {
+  if (agentMode.json) {
+    emitJson(agentMode.command, false, { error: text });
+    return;
+  }
   process.stderr.write(`${pc.red('✖')} ${text}\n`);
 };
+
 export const info = (text: string): void => line(`${pc.dim(text)}`);
 
 /**
