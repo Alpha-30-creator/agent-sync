@@ -206,6 +206,22 @@ import always reports before it adopts.
 `0` fine · `1` error · `2` done, with warnings · `3` needs a decision from you.
 Every command accepts `--json` for machine-readable output.
 
+## Upgrading
+
+```bash
+npm install -g @abdur-codes/agent-sync
+agent-sync setup
+```
+
+Installing a new version does not touch your agents by itself — nothing writes to your
+configuration behind your back, including an npm install. If a release changes the skills
+agent-sync ships, they appear as `outdated` (or `missing`, if you have never had them)
+until you converge.
+
+`setup` is the same command you used the first time and is safe to re-run; `agent-sync
+apply` does the deployment half alone. `agent-sync doctor` tells you when a machine has
+work pending, so it is a good habit after upgrading.
+
 ## What it does not do yet
 
 - **Plugins are not synced.** Claude Code and Codex both have plugin systems; agent-sync

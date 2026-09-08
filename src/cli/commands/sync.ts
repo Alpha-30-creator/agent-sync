@@ -4,7 +4,7 @@
  */
 import { existsSync } from 'node:fs';
 import { CAPABILITIES } from '../../adapters/capability-table.js';
-import { apply } from '../../app/apply.js';
+import { apply, planApply } from '../../app/apply.js';
 import { describeFailure, loadContext } from '../../app/context.js';
 import { AGENT_IDS } from '../../core/model/types.js';
 import { agentVersion, detectAgents, readMachineFacts } from '../../shell/machine.js';
@@ -129,6 +129,27 @@ export const runDoctor = (options: DoctorOptions): ExitCode => {
     }),
   );
 
+  /**
+   * Whether this machine is actually converged.
+   *
+   * doctor reported "everything looks healthy" on a machine with nine artifacts not
+   * deployed — it checked git, the store and the agents, but never whether reality
+   * matched the library. That is the one question someone runs doctor to answer, and
+   * INSTALL.md tells an agent to trust the result, so silence there is misleading.
+   * Planning is pure and writes nothing, which keeps doctor read-only.
+   */
+  let pending = 0;
+  if (loaded?.ok === true) {
+    const { plan } = planApply(loaded.value, { dryRun: true, answer: 'ask' });
+    pending = plan.operations.length;
+    if (pending > 0) {
+      notes.push(
+        `${pending} artifact(s) are not deployed as the library says they should be — ` +
+          'run "agent-sync apply" (or "agent-sync status" to see what)',
+      );
+    }
+  }
+
   const registered = loaded?.ok === true ? loaded.value.device.agents : [];
   const missing = detected.filter((agent) => !registered.includes(agent));
   const stale = registered.filter((agent) => !detected.includes(agent));
@@ -142,6 +163,7 @@ export const runDoctor = (options: DoctorOptions): ExitCode => {
     emitJson('doctor', problems.length === 0, {
       store: layout.store,
       storeExists,
+      pending,
       git: git.isGitAvailable(),
       remote: storeExists ? git.remoteUrl(layout.store) : null,
       agents: { detected, registered, versions },

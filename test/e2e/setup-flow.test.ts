@@ -103,6 +103,23 @@ describe('setting up a machine in one command', () => {
     expect(existsSync(join(home, '.cursor', 'skills', 'agent-sync', 'SKILL.md'))).toBe(true);
   });
 
+  it('says so when the machine is not converged, and stops saying it once it is', () => {
+    // doctor reported "everything looks healthy" on a machine with nine artifacts not
+    // deployed. It is the command INSTALL.md tells an agent to trust, so it has to
+    // answer the question people actually run it for.
+    run(['init', '--device', 'my-mac']);
+
+    const before = run(['--json', 'doctor']);
+    const pendingBefore = (JSON.parse(before.stdout) as { pending: number }).pending;
+    expect(pendingBefore).toBeGreaterThan(0);
+    expect(run(['doctor']).stdout).toContain('not deployed');
+
+    run(['apply']);
+    const after = run(['--json', 'doctor']);
+    expect((JSON.parse(after.stdout) as { pending: number }).pending).toBe(0);
+    expect(run(['doctor']).stdout).toContain('everything looks healthy');
+  });
+
   it('refuses flags that answer the same question', () => {
     const result = run(['setup', '--remote', 'git@x:y/z.git', '--clone', 'git@x:y/z.git']);
     expect(result.code).toBe(1);

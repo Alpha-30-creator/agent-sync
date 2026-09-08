@@ -43,6 +43,12 @@ put the published binary — so switching to the release later is just `npm i -g
 Deliberately not `pnpm link --global`: pnpm's global bin directory is frequently absent from PATH
 (`pnpm setup` is what puts it there), which produces a "successful" link and a `command not found`.
 
+To go back to the published package, run `npm rm -g @abdur-codes/agent-sync` **while the link is
+still in place**, then install normally. Removing the checkout first leaves npm nothing to
+uninstall: it reports "up to date", leaves the shims behind pointing at a directory that no longer
+exists, and the next global install fails with `EEXIST`. Deleting the stale shims by hand clears
+it.
+
 ## The rules that matter
 
 - **`src/core/` is pure.** No filesystem, network, clock, randomness, or `process.env` — decisions
