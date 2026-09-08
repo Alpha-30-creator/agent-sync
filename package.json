@@ -1,7 +1,7 @@
 {
   "name": "@abdur-codes/agent-sync",
   "version": "0.1.0",
-  "description": "Sync skills and MCP servers across Claude Code, Codex, and Cursor — and across your devices",
+  "description": "Sync skills and MCP servers across Claude Code, Codex, and Cursor \u2014 and across your devices",
   "keywords": [
     "agent-skills",
     "mcp",
@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "^3.2.4",
     "dependency-cruiser": "^17.0.0",
     "fast-check": "^4.4.0",
