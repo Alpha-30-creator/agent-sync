@@ -147,6 +147,23 @@ deploy on Windows because that clone predates the committed `.agent-sync.yaml` m
 is the mechanism that carries project identity between machines; a project's `remote:` field is
 only a linking *hint* and never auto-links.
 
+## Interceptor activation, first real evidence (2026-09-08)
+
+The premise of the whole agent-native design is that the interceptors beat an agent's own instinct.
+Tested on Windows in each CLI's read-only mode, so selection could be observed without anything
+being authored:
+
+- **Claude Code — fires.** Reasoned unprompted that the skill "should not go into
+  `~/.claude/skills/` … it gets authored in the library and shipped with `agent-sync save`".
+- **Codex — fires**, resolving the target to the library. Worth knowing: another skill-authoring
+  skill was active in the same turn and its guidance blended in. It did not change the destination,
+  but the interceptor is not the sole authority there (Q8).
+- **Cursor — untested.** Its CLI needs authentication, which an agent should not supply. The files
+  deploy correctly (its own copy in `~/.cursor/skills`); whether the model selects the skill is
+  still unverified, and needs a human or a logged-in session.
+
+Two of three is the first evidence the premise holds outside its author's head.
+
 ## Acceptance-phase findings (M3.5, from adopting a real machine)
 
 **Drift is dogfooded (2026-09-08).** A hand-edit to a deployed `a-project-debug` was detected on the
