@@ -28,6 +28,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const CLI = fileURLToPath(new URL('../../dist/cli/index.js', import.meta.url));
 const PACK = fileURLToPath(new URL('../../dist/skillpack', import.meta.url));
 const INSTALL = fileURLToPath(new URL('../../INSTALL.md', import.meta.url));
+const README = fileURLToPath(new URL('../../README.md', import.meta.url));
 
 /** Commander's parse failures — the only thing this suite is looking for. */
 const PARSE_ERROR = /error: (unknown command|unknown option|too many arguments|missing required)/;
@@ -108,10 +109,16 @@ beforeAll(() => {
     chmodSync(join(safeBin, 'git'), 0o755);
   }
 
-  const fromInstall = commandsIn(readFileSync(INSTALL, 'utf8')).map((command) => ({
-    file: 'INSTALL.md',
-    command,
-  }));
+  const fromDocs = [
+    ...commandsIn(readFileSync(INSTALL, 'utf8')).map((command) => ({
+      file: 'INSTALL.md',
+      command,
+    })),
+    ...commandsIn(readFileSync(README, 'utf8')).map((command) => ({
+      file: 'README.md',
+      command,
+    })),
+  ];
 
   prescribed = readdirSync(PACK)
     .filter((name) => statSync(join(PACK, name)).isDirectory())
@@ -125,7 +132,7 @@ beforeAll(() => {
           })),
         ),
     )
-    .concat(fromInstall);
+    .concat(fromDocs);
 });
 
 afterAll(() => {

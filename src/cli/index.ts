@@ -42,7 +42,7 @@ const run = (code: number): void => {
 
 program
   .name('agent-sync')
-  .description('Sync skills, MCP servers, and plugins across coding agents and devices')
+  .description('Sync skills and MCP servers across coding agents and devices')
   .version('0.0.0')
   .option('--store <path>', 'use a store other than ~/.agent-sync')
   .option('--json', 'machine-readable output (stable schemaVersion)', false);

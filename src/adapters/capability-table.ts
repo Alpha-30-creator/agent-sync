@@ -27,7 +27,15 @@ export interface McpLocation {
 export interface AgentCapabilities {
   readonly id: AgentId;
   readonly label: string;
-  /** Agent releases these locations were verified against, oldest first. */
+  /**
+   * Agent releases these locations were confirmed against, oldest first.
+   *
+   * This records *what was checked*, not what is supported. Agents release constantly
+   * and almost never move their config layout, so a version outside this list is
+   * expected and is not a reason to stop: `doctor` says the layout may have moved, and
+   * everything still works until it actually does. Add a version here after confirming
+   * the paths on it — never treat its absence as a blocker.
+   */
   readonly verifiedAgainst: readonly string[];
   readonly supports: Readonly<Record<ArtifactType, boolean>>;
   /** Global (user-scope) skills root, or null when the agent has none. */

@@ -120,7 +120,9 @@ export const runDoctor = (options: DoctorOptions): ExitCode => {
       if (version !== null && !verified.some((v) => version.includes(v))) {
         // Layouts are verified per version; an unknown one is a warning, not a failure.
         notes.push(
-          `${agent} reports "${version}", outside the versions agent-sync verified (${verified.join(', ')}) — layouts may have moved`,
+          `${agent} reports "${version}", outside the versions agent-sync has checked ` +
+            `(${verified.join(', ')}) — its layout is very unlikely to have moved, and ` +
+            'everything below still applies; this is a note, not a problem',
         );
       }
       return [agent, version];
