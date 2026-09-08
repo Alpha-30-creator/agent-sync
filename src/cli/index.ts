@@ -5,6 +5,7 @@
  * Every command is a thin composition of the pipeline: read the world, let the pure
  * core decide, execute, report. Commands never make decisions themselves.
  */
+import { readFileSync } from 'node:fs';
 import { Command } from 'commander';
 import { runApply, runStatus } from './commands/apply.js';
 import { runImport } from './commands/import.js';
@@ -40,10 +41,22 @@ const run = (code: number): void => {
   process.exitCode = code;
 };
 
+/**
+ * Identity comes from the manifest, not from a literal here.
+ *
+ * The version and description were duplicated in this file, so a release could ship a
+ * CLI that misreported its own version and a `--help` line that contradicted the npm
+ * page. `package.json` sits one level above `dist/` in the published package exactly as
+ * it does above `src/` here, so the same relative path works in both.
+ */
+const manifest = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+) as { readonly version: string; readonly description: string };
+
 program
   .name('agent-sync')
-  .description('Sync skills and MCP servers across coding agents and devices')
-  .version('0.0.0')
+  .description(manifest.description)
+  .version(manifest.version)
   .option('--store <path>', 'use a store other than ~/.agent-sync')
   .option('--json', 'machine-readable output (stable schemaVersion)', false);
 

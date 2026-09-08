@@ -1,0 +1,29 @@
+name: Feature request
+description: Something agent-sync should be able to do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: >
+        Describe the situation rather than the feature. What did you want to happen, and
+        what did you end up doing instead? A concrete workflow is far more useful than a
+        proposed flag.
+    validations:
+      required: true
+
+  - type: textarea
+    id: agents
+    attributes:
+      label: Which agents and machines does this involve?
+      placeholder: Claude Code and Cursor, on a Mac and a Windows desktop
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Worth knowing before you write: plugin declarations are deliberately not in the
+        first release, and the design docs under `docs/design/` record several things
+        that were considered and rejected, with reasons.

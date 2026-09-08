@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/Alpha-30-creator/agent-sync/discussions
+    about: For anything that is not a specific bug or a specific request.

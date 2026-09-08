@@ -1,0 +1,59 @@
+name: Release
+
+# Publishing is driven by a tag rather than by a push to main, so cutting a release is a
+# deliberate act and the tag is the record of what was published.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for npm provenance: npm verifies the package was built by this workflow
+      # from this commit. It matters more than usual for a tool that edits config files
+      # on the user's machine.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # The full gate again, on the exact commit being published. CI having been green on
+      # main is not the same statement.
+      - run: pnpm verify
+
+      # A tag that disagrees with package.json would publish a version nobody asked for.
+      - name: Check the tag matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json version $pkg"
+            exit 1
+          fi
+
+      - run: pnpm build
+
+      # The published package must contain the skill pack: without it `setup` deploys
+      # nothing, and the failure would only show up on a user's machine.
+      - name: Check the skill pack is in the tarball
+        run: |
+          npm pack --dry-run --json > /tmp/pack.json
+          node -e "
+            const files = require('/tmp/pack.json')[0].files.map(f => f.path);
+            const skills = files.filter(f => f.startsWith('dist/skillpack/'));
+            if (skills.length === 0) { console.error('no skillpack in the tarball'); process.exit(1); }
+            console.log('skillpack files:', skills.length);
+          "
+
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

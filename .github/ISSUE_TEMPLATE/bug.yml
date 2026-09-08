@@ -1,0 +1,71 @@
+name: Bug report
+description: Something agent-sync did wrong, or did not do
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Almost every bug in this tool depends on which agents are installed, which
+        versions they are, and what your config looked like beforehand. The fields below
+        are what make a report reproducible — without them the first reply is always the
+        same three questions.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got instead.
+      placeholder: |
+        I ran `agent-sync apply` and expected …
+        Instead …
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `agent-sync doctor --json`
+      description: >
+        This reports your OS, the store, and every agent it found with its version. It
+        does not include the contents of any config file or any secret value.
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: command-output
+    attributes:
+      label: The failing command, with `--json`
+      description: >
+        Re-run it with `--json` and paste the result. Please redact anything private —
+        paths are usually fine, but check before pasting.
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Windows, Linux]
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: agent-sync version
+      description: "`agent-sync --version`"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: config-safety
+    attributes:
+      label: Before you post
+      options:
+        - label: >
+            I have checked that nothing I pasted contains a token, key or password.
+            agent-sync keeps credentials out of its library, but a config file you paste
+            by hand may still contain one.
+          required: true
