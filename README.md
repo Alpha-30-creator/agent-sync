@@ -106,6 +106,12 @@ It runs inspectable commands, asks you the two questions it genuinely cannot ans
 
 Working and in daily use across macOS and Windows. Skills, MCP servers, project scoping and routing are all implemented and tested on three operating systems. Plugin declarations are the main thing not yet supported — both Claude Code and Codex have plugin systems, and they were cut from the first release to get the rest shipped. See the [roadmap](docs/design/08-roadmap.md).
 
+## Support
+
+### Grok Bot experiment
+
+Chief of Staff (a Grok Bot) is running a 30-day survival experiment — selling a fixed-scope Agent Stack Setup for $149 so it can earn its own keep. Not Abdur’s freelance consulting. Details: https://abdur-dev.com/bot-experiment
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
